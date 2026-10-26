@@ -1110,6 +1110,7 @@ function telOK(t){const d=t.replace(/[\s\-()]/g,'');return /^09\d{8}$/.test(d)||
   $('gate').addEventListener('pointerdown',first,{capture:true});$('gate').addEventListener('keydown',first,{capture:true});
   $('gSnd').addEventListener('click',e=>{e.stopPropagation();gmUser=true;if(gmOn)gmStop();else gmPlay();});
   const gmFade=()=>{const st=GM.volume/16;let k=0;const iv=setInterval(()=>{k++;try{GM.volume=Math.max(0,GM.volume-st);}catch(e){}if(GM.volume<=0.01||k>=16){clearInterval(iv);GM.pause();}},60);};
+  window.gateMusicOff=()=>{if(!GM.paused)gmFade();};
   const setType=t=>{docType=t;$('tCed').setAttribute('aria-selected',String(t==='cedula'));$('tPas').setAttribute('aria-selected',String(t!=='cedula'));$('gId').inputMode=t==='cedula'?'numeric':'text';$('gId').placeholder=t==='cedula'?'10 dígitos':'Número de pasaporte';$('eId').textContent='';};
   $('tCed').onclick=()=>setType('cedula');$('tPas').onclick=()=>setType('pasaporte');
   $('gForm').addEventListener('submit',e=>{e.preventDefault();let ok=true;
@@ -1120,14 +1121,14 @@ function telOK(t){const d=t.replace(/[\s\-()]/g,'');return /^09\d{8}$/.test(d)||
     $('eOk').textContent=$('gOk').checked?'':(ok=false,'Para continuar, acepte el tratamiento de datos.');
     if(!ok)return;
     if(REG_ENDPOINT){const body=new URLSearchParams({nombre:name,documento:id,tipo:docType,telefono:tel,consentimiento:'si'});try{fetch(REG_ENDPOINT,{method:'POST',mode:'no-cors',body,keepalive:true}).catch(()=>{});}catch(err){}}
-    gmFade();const g=$('gate');g.style.transition='opacity .8s';g.style.opacity='0';setTimeout(()=>g.remove(),820);});
+    const g=$('gate');g.style.transition='opacity .8s';g.style.opacity='0';setTimeout(()=>g.remove(),820);});
 })();
 
 /* ================= INICIO ================= */
 resize();playBtn();requestAnimationFrame(frame);
 ['torre','playa','beachclub','piscina','lobby'].forEach(n=>getTex(n).catch(()=>{}));
 goScene('fachada',{push:false});
-function begin(sound){const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);
+function begin(sound){if(window.gateMusicOff)gateMusicOff();const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);
   Music.on=sound;Music.start();$('dMusic').setAttribute('aria-pressed',String(sound));$('dMusic').classList.toggle('off',!sound);$('dMusic').querySelector('span').textContent=sound?'Música':'Sin música';
   setVoice(sound);if(sound&&Voice.ok){try{speechSynthesis.speak(new SpeechSynthesisUtterance(' '));}catch(e){}}
   startTour(0);}
@@ -1185,7 +1186,7 @@ let filmPrev=null;
 function playFilm(){if(tour.on)pauseTour();Voice.stop();closeSheet();closeReel();const f=$('film'),v=$('filmV');if(!v.src)v.src='img/aura-bay-film.mp4';f.classList.add('on');filmPrev=Music.on;if(Music.on&&Music.started)Music.set(false);v.currentTime=0;v.play().catch(()=>{});}
 function closeFilm(){const f=$('film'),v=$('filmV');v.pause();f.classList.remove('on');if(filmPrev&&Music.started)Music.set(true);filmPrev=null;}
 $('filmX').onclick=closeFilm;$('filmV').addEventListener('ended',closeFilm);$('dFilm').onclick=playFilm;
-$('startFilm').onclick=()=>{const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);Music.on=true;Music.start();Music.set(true);setVoice(true);playFilm();};
+$('startFilm').onclick=()=>{if(window.gateMusicOff)gateMusicOff();const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);Music.on=true;Music.start();Music.set(true);setVoice(true);playFilm();};
 window.__aura={goScene,SC,layers:()=>layers,Music,showFinale};
 })();
 </script>
