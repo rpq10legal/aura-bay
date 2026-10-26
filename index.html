@@ -238,7 +238,7 @@ table.data th{font-weight:500;color:var(--taupe);font-size:10.5px;letter-spacing
 #reel .rcap{position:absolute;left:max(24px,env(safe-area-inset-left,0px));bottom:calc(36px + env(safe-area-inset-bottom,0px));max-width:min(620px,calc(100vw - 48px));text-shadow:0 2px 20px rgba(0,0,0,.7)}
 #reel .rcap .e{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--glow)}
 #reel .rcap .t{font-family:var(--display);font-size:clamp(26px,4.4vw,52px);letter-spacing:.1em;text-transform:uppercase;margin-top:8px;line-height:1.1}
-#reel .rcap .n{display:none;font-size:11px;color:var(--sand);margin-top:12px;opacity:.75}
+#reel .rcap .n{min-height:1em;font-size:11px;color:var(--sand);margin-top:12px;opacity:.75}
 #reel .rprog{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(70px,env(safe-area-inset-right,0px));display:flex;gap:4px}
 #reel .rprog i{flex:1;height:2px;background:rgba(244,238,230,.25);position:relative;overflow:hidden}
 #reel .rprog i b{position:absolute;inset:0;background:var(--cream);transform-origin:left;transform:scaleX(0)}
@@ -458,7 +458,7 @@ table.data th{font-weight:500;color:var(--taupe);font-size:10.5px;letter-spacing
 <div id="reel" aria-label="Momentos Aura Bay"><div class="rbg" id="rbg"></div><img class="rimg" id="rA" alt=""><img class="rimg" id="rB" alt="">
   <div class="rprog" id="rprog"></div>
   <button class="btn iconbtn rx" id="rX" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  <div class="rcap"><div class="e" id="rE"></div><div class="t" id="rT"></div><div class="n">Fotografías ilustrativas del material del proyecto</div></div></div>
+  <div class="rcap"><div class="e" id="rE"></div><div class="t" id="rT"></div><div class="n" id="rN"></div></div></div>
 
 <div id="film" aria-label="Película Aura Bay"><video id="filmV" controls playsinline preload="none" poster="img/fachada.jpg"></video><button class="btn iconbtn fx" id="filmX" aria-label="Cerrar película"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <div id="lift" aria-hidden="true"><div class="door l"></div><div class="door r"></div>
@@ -606,7 +606,7 @@ const INFO={
 };
 const REELS={
   mar:{e:'Experiencia mar',items:[['playa','La playa de Aura Bay'],['terraza-bar','Terraza con bar y piscina'],['beachclub','Beach club'],['piscina','Solárium frente al mar']]},
-  gastro:{e:'Experiencias gastronómicas',items:[['clip-coctel.mp4','Coctelería de autor'],['restaurante','Restaurante al aire libre'],['clip-flambe.mp4','Cocina en vivo'],['clip-emplatado.mp4','Sabores del Pacífico']]},
+  gastro:{e:'Experiencias gastronómicas',items:[['clip-coctel.mp4','Coctelería de autor','Video referencial · Denys Gromov'],['restaurante','Restaurante al aire libre'],['clip-flambe.mp4','Cocina en vivo','Video referencial · Ivan S.'],['clip-emplatado.mp4','Sabores del Pacífico','Video referencial · Ivan S.']]},
 };
 
 /* ================= MOTOR WEBGL: mirada inmersiva + imagen viva ================= */
@@ -801,10 +801,10 @@ function playReel(k,onEnd){const R=REELS[k];if(!R)return;closeSheet();const el=$
   $('rprog').innerHTML=R.items.map(()=>'<i><b></b></i>').join('');const bars=[...$('rprog').children].map(i=>i.firstChild);
   let i=0,front=null;const token={};reelState=token;
   const mk=(src)=>{const isV=/\.mp4$/.test(src);const n=document.createElement(isV?'video':'img');n.className='rimg';if(isV){n.muted=true;n.playsInline=true;n.setAttribute('playsinline','');n.preload='auto';n.src='img/'+src;}else n.src=IMG(src);return n;};
-  const show=()=>{if(reelState!==token)return;if(i>=R.items.length){closeReel();onEnd&&onEnd();return;}const [src,cap]=R.items[i];const isV=/\.mp4$/.test(src);
+  const show=()=>{if(reelState!==token)return;if(i>=R.items.length){closeReel();onEnd&&onEnd();return;}const [src,cap,cr]=R.items[i];const isV=/\.mp4$/.test(src);
     const node=mk(src);el.insertBefore(node,$('rprog'));void node.offsetWidth;node.classList.add('on');if(isV){node.style.objectFit='cover';node.play().catch(()=>{});}
     const old=front;front=node;if(old){old.classList.remove('on');setTimeout(()=>old.remove(),1200);}
-    $('rbg').style.backgroundImage=isV?'none':`url(${IMG(src)})`;$('rT').textContent=cap;
+    $('rbg').style.backgroundImage=isV?'none':`url(${IMG(src)})`;$('rT').textContent=cap;$('rN').textContent=cr||'';
     const DUR=isV?5000:4600;bars.forEach((b,j)=>{b.style.transition='none';b.style.transform=`scaleX(${j<i?1:0})`;});const bb=bars[i];void bb.offsetWidth;bb.style.transition=`transform ${DUR}ms linear`;bb.style.transform='scaleX(1)';
     i++;setTimeout(show,DUR);};
   show();}
@@ -1004,16 +1004,17 @@ function openData(){const row=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
   <div class="group"><h3>Cómo navegar</h3><p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--muted)">Arrastre para girar la mirada. Rueda del mouse o dos dedos: acercar. Toque los puntos luminosos para entrar. Flechas: mirar. Tecla N: siguiente parada.</p></div>`,'data');}
 
 /* ================= MÚSICA DE PLAYA ORIGINAL (generada en vivo) ================= */
-const Music={ctx:null,on:true,master:null,duckG:null,src:null,buf:null,started:false,loading:null,
-  init(){if(this.ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=this.ctx=new AC();
-    this.master=c.createGain();this.master.gain.value=0;this.master.connect(c.destination);
-    this.duckG=c.createGain();this.duckG.gain.value=1;this.duckG.connect(this.master);
-    this.loading=fetch('img/aura-music.m4a').then(r=>r.arrayBuffer()).then(ab=>new Promise((ok,ko)=>c.decodeAudioData(ab,ok,ko))).then(buf=>{this.buf=buf;this.play();}).catch(()=>{});},
-  play(){if(!this.buf||this.src||!this.ctx)return;const s=this.ctx.createBufferSource();s.buffer=this.buf;s.loop=true;s.loopStart=.5;s.loopEnd=Math.min(60.5,this.buf.duration);s.connect(this.duckG);s.start(0,.5);this.src=s;},
-  start(){this.init();if(!this.ctx)return;try{this.ctx.resume();}catch(e){}if(this.started)return;this.started=true;this.play();this.set(this.on);},
-  set(on){this.on=on;document.body.classList.toggle('music',on);if(!this.ctx)return;const g=this.master.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(on?.55:0,t+(on?2.5:.6));},
-  duck(d){if(!this.ctx)return;const g=this.duckG.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(d?.3:1,t+.6);},
-  chime(){if(!this.ctx||!this.on)return;const c=this.ctx,t=c.currentTime;[659.25,880].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.18);g.gain.linearRampToValueAtTime(.05,t+i*.18+.01);g.gain.exponentialRampToValueAtTime(.0001,t+i*.18+.8);o.connect(g);g.connect(this.master);o.start(t+i*.18);o.stop(t+i*.18+.9);});}
+const Music={el:null,on:true,started:false,vol:0,target:0,ducked:false,timer:null,BASE:.9,DUCK:.3,
+  init(){if(this.el)return;const a=this.el=new Audio('img/aura-music.m4a');a.loop=true;a.preload='auto';a.volume=0;a.setAttribute('playsinline','');},
+  apply(){const t=this.on?(this.ducked?this.DUCK:this.BASE):0;this.target=t;if(this.timer)return;
+    this.timer=setInterval(()=>{const a=this.el;if(!a){clearInterval(this.timer);this.timer=null;return;}const d=this.target-this.vol,st=this.target>this.vol?.02:.04;
+      if(Math.abs(d)<=st){this.vol=this.target;clearInterval(this.timer);this.timer=null;}else this.vol+=Math.sign(d)*st;
+      try{a.volume=Math.max(0,Math.min(1,this.vol));}catch(e){}
+      if(this.vol<=0&&!this.on&&!a.paused)a.pause();},50);},
+  start(){this.init();this.started=true;if(this.on)this.el.play().catch(()=>{});this.apply();},
+  set(on){this.on=on;document.body.classList.toggle('music',on);if(!this.el)return;if(on&&this.el.paused)this.el.play().catch(()=>{});this.apply();},
+  duck(d){this.ducked=!!d;if(this.el)this.apply();},
+  chime(){}
 };
 $('dMusic').onclick=()=>{if(!Music.started)Music.start();Music.set(!Music.on);$('dMusic').setAttribute('aria-pressed',String(Music.on));$('dMusic').classList.toggle('off',!Music.on);$('dMusic').querySelector('span').textContent=Music.on?'Música':'Sin música';};
 
