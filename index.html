@@ -375,6 +375,9 @@ table.data th{font-weight:500;color:var(--taupe);font-size:10.5px;letter-spacing
 /* ---------- registro previo ---------- */
 #gate{position:fixed;inset:0;z-index:70;display:grid;place-items:center;overflow-y:auto;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:#0f0c09}
 #gate video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;opacity:.42}
+.gsnd{position:fixed;z-index:2;top:calc(14px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));display:inline-flex;align-items:center;gap:8px;background:rgba(20,17,14,.7);color:var(--sand);border:1px solid rgba(220,205,189,.35);border-radius:999px;padding:8px 14px;font:inherit;font-size:11px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;animation:ctaPulse 2.4s ease-in-out infinite}
+.gsnd svg{width:16px;height:16px}
+.gsnd.on{animation:none;opacity:.75}
 #gate .gshade{position:fixed;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(15,12,9,.35),rgba(15,12,9,.9))}
 .gbox{position:relative;width:min(460px,100%);background:rgba(20,17,14,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(220,205,189,.3);border-radius:3px;padding:28px 24px;display:flex;flex-direction:column;gap:14px}
 .gbox .logo{font-family:var(--display);font-size:34px;letter-spacing:.26em;line-height:1}
@@ -474,6 +477,7 @@ table.data th{font-weight:500;color:var(--taupe);font-size:10.5px;letter-spacing
 </div></div>
 <div id="gate">
   <video autoplay muted loop playsinline poster="img/fachada.jpg" src="img/intro-loop.mp4"></video><div class="gshade"></div>
+  <button type="button" class="gsnd" id="gSnd" aria-label="Activar música"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg><span>Activar música</span></button>
   <form class="gbox" id="gForm" novalidate>
     <div><div class="logo">AURA BAY</div><div class="lsub">Luxury Residences</div></div>
     <h1>Bienvenido al recorrido privado</h1>
@@ -1096,6 +1100,16 @@ let docType='cedula';
 function cedulaOK(c){if(!/^\d{10}$/.test(c))return false;const pr=+c.slice(0,2);if(!((pr>=1&&pr<=24)||pr===30))return false;if(+c[2]>5)return false;let sum=0;for(let i=0;i<9;i++){let v=+c[i]*(i%2?1:2);if(v>9)v-=9;sum+=v;}return ((10-sum%10)%10)===+c[9];}
 function telOK(t){const d=t.replace(/[\s\-()]/g,'');return /^09\d{8}$/.test(d)||/^\+?\d{9,15}$/.test(d);}
 (function(){
+  const GM=new Audio('img/aura-entrada.m4a');GM.loop=true;GM.preload='auto';GM.volume=.85;let gmOn=false;
+  const gmLbl=()=>{$('gSnd').classList.toggle('on',gmOn);$('gSnd').querySelector('span').textContent=gmOn?'Música':'Activar música';$('gSnd').setAttribute('aria-label',gmOn?'Silenciar música':'Activar música');};
+  const gmPlay=()=>{if(gmOn)return;GM.play().then(()=>{gmOn=true;gmLbl();}).catch(()=>{});};
+  const gmStop=()=>{GM.pause();gmOn=false;gmLbl();};
+  let gmUser=false;
+  gmPlay();
+  const first=e=>{if(!gmUser&&!(e.target&&e.target.closest&&e.target.closest('#gSnd')))gmPlay();};
+  $('gate').addEventListener('pointerdown',first,{capture:true});$('gate').addEventListener('keydown',first,{capture:true});
+  $('gSnd').addEventListener('click',e=>{e.stopPropagation();gmUser=true;if(gmOn)gmStop();else gmPlay();});
+  const gmFade=()=>{const st=GM.volume/16;let k=0;const iv=setInterval(()=>{k++;try{GM.volume=Math.max(0,GM.volume-st);}catch(e){}if(GM.volume<=0.01||k>=16){clearInterval(iv);GM.pause();}},60);};
   const setType=t=>{docType=t;$('tCed').setAttribute('aria-selected',String(t==='cedula'));$('tPas').setAttribute('aria-selected',String(t!=='cedula'));$('gId').inputMode=t==='cedula'?'numeric':'text';$('gId').placeholder=t==='cedula'?'10 dígitos':'Número de pasaporte';$('eId').textContent='';};
   $('tCed').onclick=()=>setType('cedula');$('tPas').onclick=()=>setType('pasaporte');
   $('gForm').addEventListener('submit',e=>{e.preventDefault();let ok=true;
@@ -1106,7 +1120,7 @@ function telOK(t){const d=t.replace(/[\s\-()]/g,'');return /^09\d{8}$/.test(d)||
     $('eOk').textContent=$('gOk').checked?'':(ok=false,'Para continuar, acepte el tratamiento de datos.');
     if(!ok)return;
     if(REG_ENDPOINT){const body=new URLSearchParams({nombre:name,documento:id,tipo:docType,telefono:tel,consentimiento:'si'});try{fetch(REG_ENDPOINT,{method:'POST',mode:'no-cors',body,keepalive:true}).catch(()=>{});}catch(err){}}
-    const g=$('gate');g.style.transition='opacity .8s';g.style.opacity='0';setTimeout(()=>g.remove(),820);});
+    gmFade();const g=$('gate');g.style.transition='opacity .8s';g.style.opacity='0';setTimeout(()=>g.remove(),820);});
 })();
 
 /* ================= INICIO ================= */
