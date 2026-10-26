@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#100d0a">
+<meta name="description" content="Recorrido virtual de Aura Bay Luxury Residences, Punta Centinela, Santa Elena.">
+<meta property="og:title" content="Aura Bay · Recorrido virtual">
+<meta property="og:description" content="La costa del Pacífico tiene un nuevo ícono. Recorra Aura Bay Luxury Residences.">
+<meta property="og:image" content="https://rpq10legal.github.io/aura-bay/img/fachada.jpg">
+<meta property="og:type" content="website">
+<title>Aura Bay 360</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Jost:wght@300;400;500&display=swap">
+<style>
+/* Layout: lienzo cinematográfico a pantalla completa (WebGL) con partículas encima; marca arriba-izquierda,
+   ubicación arriba-derecha, capítulo del brochure a la izquierda, guía con voz abajo-izquierda, controles abajo-derecha. */
+:root{
+  --ink:#1d1915; --mocha:#6f6253; --taupe:#a69a8a; --sand:#dccdbd; --cream:#f4eee6; --glow:#e7c290; --sea:#4f8f98; --teal:#5fc1cc;
+  --panel:rgba(29,25,21,.78); --panel-solid:#241f1a; --line:rgba(220,205,189,.24); --muted:rgba(244,238,230,.7);
+  --ok:#8fcfa4; --warn:#e7b46a;
+  --display:"Marcellus","Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --body:"Jost","Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(--cream);font-family:var(--body);font-weight:300;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--taupe);font-weight:400}
+.disp{font-family:var(--display);letter-spacing:.16em;text-transform:uppercase;font-weight:400}
+
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;background:var(--ink)}
+#gl.drag{cursor:grabbing}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen}
+#shade{position:fixed;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(20,17,14,.5),rgba(20,17,14,0) 16%,rgba(20,17,14,0) 72%,rgba(20,17,14,.45))}
+.lb{position:fixed;left:0;right:0;height:0;background:#0b0907;z-index:5;pointer-events:none;transition:height 1.2s cubic-bezier(.6,0,.2,1)}
+.lb.t{top:0}.lb.b{bottom:0}
+body.cine .lb{height:7vh}
+@media (max-width:720px){body.cine .lb{height:0}}
+
+/* ---------- escenas de interfaz ---------- */
+.scene-html{position:fixed;inset:0;overflow:auto;display:none;z-index:3;padding-top:calc(100px + env(safe-area-inset-top,0px));padding-bottom:calc(230px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:#16130f}
+.scene-html.on{display:block;animation:fadeIn .8s ease}
+.scene-html .bgimg{position:fixed;inset:-40px;background-size:cover;background-position:center;filter:blur(18px) brightness(.38) saturate(1.1);animation:kb 30s ease-in-out infinite alternate;z-index:-1}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes kb{from{transform:scale(1.04)}to{transform:scale(1.16) translate(-1.5%,-1.5%)}}
+.sh-in{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:18px;position:relative}
+.sh-in h2{font-family:var(--display);font-weight:400;font-size:clamp(26px,4.4vw,46px);letter-spacing:.14em;text-transform:uppercase;margin:0;text-wrap:balance}
+.sh-in p.lead{margin:0;max-width:64ch;font-size:16px;line-height:1.65;color:var(--muted)}
+.wcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.wcard{text-align:left;background:rgba(29,25,21,.55);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:2px;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:8px;min-width:0;transition:border-color .3s,transform .3s}
+.wcard:hover{border-color:var(--glow);transform:translateY(-2px)}
+.wcard .disp{font-size:17px}
+.wcard span.s{font-size:13.5px;color:var(--muted);line-height:1.5}
+.wcard svg{width:30px;height:30px;color:var(--glow)}
+.wcard .big{font-family:var(--display);font-size:42px;letter-spacing:.04em;color:var(--glow);line-height:1}
+.steam{position:fixed;bottom:-20vh;width:40vw;height:60vh;border-radius:50%;background:radial-gradient(closest-side,rgba(255,250,240,.10),transparent);filter:blur(20px);animation:rise 14s linear infinite;pointer-events:none;z-index:-1}
+@keyframes rise{from{transform:translateY(0) scale(.8);opacity:0}20%{opacity:1}to{transform:translateY(-110vh) scale(1.4);opacity:0}}
+
+/* gemelo digital del parqueo */
+.twin-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+@media (max-width:900px){.twin-wrap{grid-template-columns:1fr}}
+.twin{position:relative;border:1px solid rgba(95,193,204,.35);background:radial-gradient(ellipse at 50% 30%,#14262a,#0c0f10 70%);border-radius:3px;overflow:hidden;aspect-ratio:16/10;max-width:100%}
+.twin canvas{width:100%;height:100%;display:block}
+.twin .hud{position:absolute;left:12px;top:10px;right:12px;display:flex;gap:16px;flex-wrap:wrap;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#bfeee6;pointer-events:none}
+.twin .hud b{font-family:var(--display);font-size:22px;letter-spacing:.04em;color:var(--cream);display:block;font-weight:400}
+.twin .tag2{position:absolute;right:12px;bottom:10px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(191,238,230,.6)}
+.phone{width:100%;max-width:300px;justify-self:center;border-radius:34px;border:1px solid rgba(220,205,189,.35);background:linear-gradient(160deg,#211c17,#121010);padding:14px;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+.phone .scr{border-radius:24px;background:linear-gradient(170deg,#2a231c,#16130f);padding:16px 14px;display:flex;flex-direction:column;gap:10px;min-height:440px}
+.phone .notch{width:90px;height:6px;border-radius:6px;background:#000;margin:0 auto 6px;opacity:.6}
+.app-h{display:flex;justify-content:space-between;align-items:baseline}
+.app-h b{font-family:var(--display);letter-spacing:.24em;font-weight:400;font-size:14px}
+.app-card{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;background:rgba(244,238,230,.04)}
+.app-card .k{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--taupe)}
+.app-card .v{font-family:var(--display);font-size:20px;letter-spacing:.04em}
+.app-btn{border:0;border-radius:10px;padding:11px;background:var(--sand);color:var(--ink);font-weight:500;letter-spacing:.12em;text-transform:uppercase;font-size:11px;cursor:pointer}
+.app-btn.alt{background:transparent;border:1px solid var(--line);color:var(--cream)}
+
+/* ---------- barra superior ---------- */
+.top{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top>*{pointer-events:auto}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand .name{font-family:var(--display);font-size:22px;letter-spacing:.3em;line-height:1;white-space:nowrap;text-shadow:0 1px 12px rgba(0,0,0,.4)}
+.brand .sub{font-size:9.5px;letter-spacing:.42em;color:var(--sand);text-transform:uppercase;padding-top:4px;border-top:1px solid rgba(220,205,189,.55);margin-top:4px;white-space:nowrap}
+.badge{margin-top:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sand);opacity:.75}
+.where{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0;text-shadow:0 1px 12px rgba(0,0,0,.5)}
+.where .place{font-family:var(--display);font-size:16px;letter-spacing:.18em;text-transform:uppercase;text-align:right;text-wrap:balance}
+.where .placesub{font-size:11px;letter-spacing:.2em;color:var(--sand);text-transform:uppercase;text-align:right}
+
+/* ---------- capítulo (textos del brochure) ---------- */
+#chapter{position:fixed;z-index:8;left:max(24px,env(safe-area-inset-left,0px));top:30%;max-width:min(620px,calc(100vw - 48px));pointer-events:none;opacity:0;transform:translateY(14px);transition:opacity 1.2s ease,transform 1.2s ease;text-shadow:0 2px 24px rgba(0,0,0,.55)}
+#chapter.on{opacity:1;transform:none}
+#chapter .ce{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--glow)}
+#chapter .ct{font-family:var(--display);font-size:clamp(28px,4.6vw,56px);letter-spacing:.12em;text-transform:uppercase;line-height:1.08;margin-top:10px;text-wrap:balance}
+#chapter .cl{width:80px;height:1px;background:var(--glow);margin:16px 0 12px}
+#chapter .cs{font-size:clamp(14px,1.6vw,17px);line-height:1.6;color:var(--cream);max-width:52ch}
+@media (max-width:720px){#chapter{top:18%}}
+
+/* ---------- pines ---------- */
+#pins{position:fixed;inset:0;pointer-events:none;z-index:10;overflow:hidden}
+.pin{position:absolute;left:0;top:0;pointer-events:auto;border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:center;gap:8px;will-change:transform;transition:opacity .5s}
+.pin .dot{width:30px;height:30px;border-radius:50%;flex:none;position:relative;background:rgba(29,25,21,.45);border:1.5px solid var(--cream);display:grid;place-items:center;transition:transform .2s;backdrop-filter:blur(3px)}
+.pin .dot::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--glow);box-shadow:0 0 12px var(--glow)}
+.pin .dot::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(231,194,144,.7);animation:ping 2.4s ease-out infinite}
+.pin.info .dot::after{background:var(--cream);box-shadow:0 0 10px rgba(255,255,255,.7)}
+.pin.reel .dot{border-color:var(--glow)}
+.pin.reel .dot::after{width:0;height:0;border-radius:0;background:none;box-shadow:none;border-left:9px solid var(--glow);border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:3px}
+.pin .lbl{font-family:var(--display);font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;background:var(--panel);border:1px solid var(--line);padding:5px 9px;border-radius:2px;opacity:0;transform:translateX(-4px);transition:.2s;pointer-events:none}
+.pin .lbl small{display:block;font-family:var(--body);letter-spacing:.04em;text-transform:none;color:var(--sand);font-size:11px}
+.pin:hover .lbl,.pin:focus-visible .lbl{opacity:1;transform:none;pointer-events:auto}
+.pin:hover .dot{transform:scale(1.12)}
+@media (hover:none){.pin .lbl{pointer-events:auto;opacity:.94;transform:none;font-size:10.5px;padding:3px 7px}.pin .lbl small{display:none}}
+@keyframes ping{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+
+/* ---------- guía ---------- */
+.guide{position:fixed;z-index:22;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(450px,calc(100vw - 32px));
+  background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:3px;padding:12px 14px 10px;display:flex;flex-direction:column;gap:9px}
+.guide-head{display:flex;align-items:center;gap:12px}
+.emblem{width:40px;height:40px;flex:none;position:relative;display:grid;place-items:center}
+.emblem i{position:absolute;inset:0;border-radius:50%;border:1px solid var(--glow);opacity:.35}
+.emblem i:nth-child(2){inset:7px;opacity:.6}
+.emblem b{width:12px;height:12px;border-radius:50%;background:var(--glow);box-shadow:0 0 16px var(--glow)}
+.speaking .emblem i{animation:wave 1.6s ease-out infinite}
+.speaking .emblem i:nth-child(2){animation-delay:.5s}
+@keyframes wave{0%{transform:scale(.7);opacity:.8}100%{transform:scale(1.25);opacity:0}}
+.guide-title{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.guide-title .t{font-family:var(--display);font-size:15px;letter-spacing:.12em;text-transform:uppercase;text-wrap:balance}
+.guide-text{font-size:14.5px;line-height:1.55;max-height:24vh;overflow:auto}
+.guide-ctrl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{background:transparent;border:1px solid var(--line);border-radius:2px;padding:8px 12px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--glow)}
+.btn.primary{background:var(--sand);color:var(--ink);border-color:var(--sand);font-weight:500}
+.btn.primary:hover{background:var(--cream)}
+.btn svg{width:15px;height:15px}
+.iconbtn{width:34px;height:34px;padding:0;justify-content:center}
+.guide.min .guide-text,.guide.min .guide-ctrl{display:none}
+.progress{height:2px;background:var(--line);position:relative;overflow:hidden}
+.progress span{position:absolute;left:0;top:0;bottom:0;background:var(--glow);width:0;transition:width .5s}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+.eq i{width:2px;background:var(--glow);height:4px;animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}
+@keyframes eq{50%{height:12px}}
+body:not(.music) .eq i{animation:none;height:3px;opacity:.5}
+
+/* ---------- dock ---------- */
+.dock{position:fixed;z-index:21;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:2px;background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:3px;padding:5px}
+.dock button{background:none;border:0;border-radius:2px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 7px;cursor:pointer;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--sand);min-width:50px}
+.dock button:hover,.dock button[aria-pressed="true"]{background:rgba(220,205,189,.12);color:var(--cream)}
+.dock button.off{opacity:.55}
+.dock svg{width:19px;height:19px}
+
+/* ---------- paneles ---------- */
+.sheet{position:fixed;z-index:30;top:calc(84px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));width:min(440px,calc(100vw - 32px));
+  background:rgba(29,25,21,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:3px;display:flex;flex-direction:column;overflow:hidden;animation:sheetIn .28s ease}
+@keyframes sheetIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.sheet-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+.sheet-h h2{margin:2px 0 0;font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.12em;text-transform:uppercase;text-wrap:balance}
+.sheet-b{overflow:auto;padding:14px 16px 18px;display:flex;flex-direction:column;gap:16px;min-height:0}
+.note{font-size:12.5px;line-height:1.5;color:var(--sand);background:rgba(111,98,83,.3);border-left:2px solid var(--glow);padding:8px 10px}
+.group h3{margin:0 0 8px;font-weight:500;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--taupe)}
+.thumbs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.thumb{position:relative;border:1px solid var(--line);border-radius:2px;overflow:hidden;cursor:pointer;padding:0;background:#000;aspect-ratio:16/10;max-width:100%}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85;transition:transform .5s,opacity .3s}
+.thumb:hover img{transform:scale(1.06);opacity:1}
+.thumb span{position:absolute;left:0;right:0;bottom:0;padding:16px 8px 6px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;text-align:left;background:linear-gradient(transparent,rgba(0,0,0,.75))}
+.thumb.cur{border-color:var(--glow)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{background:none;border:1px solid var(--line);border-radius:2px;padding:7px 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;color:var(--sand)}
+.tab[aria-selected="true"]{background:var(--sand);color:var(--ink);border-color:var(--sand)}
+.menu-hero{position:relative;border-radius:2px;overflow:hidden;aspect-ratio:16/9;max-width:100%;cursor:pointer;border:1px solid var(--line);padding:0;background:#000;display:block;width:100%}
+.menu-hero img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 6s ease}
+.menu-hero:hover img{transform:scale(1.08)}
+.menu-hero span{position:absolute;left:12px;bottom:10px;font-family:var(--display);letter-spacing:.16em;text-transform:uppercase;font-size:14px;display:flex;gap:8px;align-items:center;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+.menu-item{display:grid;grid-template-columns:84px minmax(0,1fr);gap:4px 12px;padding:12px 0;border-bottom:1px dashed var(--line);align-items:start}
+.menu-item .ph{grid-row:span 3;width:84px;height:84px;border-radius:2px;overflow:hidden;background:linear-gradient(150deg,#3a3129,#1d1915)}
+.menu-item .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.menu-item h4{margin:0;font-family:var(--display);font-weight:400;font-size:16px;letter-spacing:.06em}
+.menu-item p{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)}
+.tag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--line);padding:3px 6px;border-radius:2px;color:var(--sand);white-space:nowrap;justify-self:start}
+.tag.cost{border-color:rgba(231,194,144,.6);color:var(--glow)}
+.mysel{border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:8px}
+.mysel ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6}
+table.data{width:100%;border-collapse:collapse;font-size:13px}
+table.data td,table.data th{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
+table.data th{font-weight:500;color:var(--taupe);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase}
+.num{font-variant-numeric:tabular-nums}
+.st{display:inline-block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 6px;border-radius:2px}
+.st.v{background:rgba(143,207,164,.15);color:var(--ok)}
+.st.c{background:rgba(231,180,106,.15);color:var(--warn)}
+.st.p{background:rgba(166,154,138,.2);color:var(--sand)}
+.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.plan{border:1px solid var(--line);background:none;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;min-width:0;border-radius:2px;overflow:hidden}
+.plan .pimg{background:#f4eee6;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:6px;max-width:100%}
+.plan .pimg img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.plan .pt{padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.plan .pt b{font-family:var(--display);font-weight:400;font-size:18px;letter-spacing:.08em}
+.plan .pt span{font-size:12px;color:var(--sand)}
+.bigplan{background:#f4eee6;padding:8px;border-radius:2px}
+.bigplan img{width:100%;height:auto;display:block}
+.charger{display:flex;align-items:center;gap:10px}
+.ring{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);flex:none}
+.ring.ok{border-color:var(--sea);box-shadow:0 0 12px rgba(79,143,152,.6)}
+.ring.chg{border-color:var(--ok);animation:pulse 1.6s infinite}
+.ring.res{border-color:var(--warn)}
+@keyframes pulse{50%{box-shadow:0 0 16px rgba(143,207,164,.7)}}
+.bar{height:4px;background:var(--line);margin-top:4px}
+.bar span{display:block;height:100%;background:var(--ok);transition:width 1s}
+.steps{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--muted)}
+.steps li::before{content:"";width:10px;height:10px;border-radius:50%;border:1px solid var(--taupe)}
+.steps li.done{color:var(--cream)}
+.steps li.done::before{background:var(--ok);border-color:var(--ok)}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sand)}
+.field input{background:rgba(220,205,189,.07);border:1px solid var(--line);color:var(--cream);padding:9px 10px;border-radius:2px;font:inherit;font-size:14px}
+.pass{display:flex;gap:12px;align-items:center;border:1px solid var(--line);padding:10px}
+.pass canvas{width:84px;height:84px;background:var(--cream);image-rendering:pixelated}
+.infoimg{width:100%;max-height:300px;object-fit:cover;border-radius:2px;display:block}
+.tower{width:100%;height:230px;display:block;border:1px solid rgba(95,193,204,.25);border-radius:2px;background:radial-gradient(ellipse at 50% 40%,#162428,#0d1011 70%);cursor:pointer}
+.lvls{display:flex;flex-direction:column;gap:6px}
+.lvl{display:grid;grid-template-columns:60px minmax(0,1fr);gap:10px;align-items:center;text-align:left;background:rgba(220,205,189,.05);border:1px solid var(--line);border-radius:2px;padding:6px;cursor:pointer}
+.lvl:hover,.lvl.cur{border-color:var(--glow);background:rgba(231,194,144,.12)}
+.lvl .lt{width:60px;height:40px;border-radius:2px;overflow:hidden;background:linear-gradient(150deg,#3a3129,#1d1915)}
+.lvl .lt img{width:100%;height:100%;object-fit:cover;display:block}
+.lvl b{font-family:var(--display);font-weight:400;letter-spacing:.12em;text-transform:uppercase;font-size:13.5px;display:block}
+.lvl small{font-size:11.5px;color:var(--sand)}
+
+/* ---------- montajes con personas (reels) ---------- */
+#reel{position:fixed;inset:0;z-index:35;background:#0b0907;display:none}
+#reel.on{display:block;animation:fadeIn .6s ease}
+#reel .rbg{position:absolute;inset:-60px;background-size:cover;background-position:center;filter:blur(30px) brightness(.45);transition:background-image .8s}
+#reel .rimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity 1.1s ease}
+#reel .rimg.on{opacity:1;animation:kbr 5.2s ease-out forwards}
+@keyframes kbr{from{transform:scale(1.02)}to{transform:scale(1.12)}}
+#reel .rcap{position:absolute;left:max(24px,env(safe-area-inset-left,0px));bottom:calc(36px + env(safe-area-inset-bottom,0px));max-width:min(620px,calc(100vw - 48px));text-shadow:0 2px 20px rgba(0,0,0,.7)}
+#reel .rcap .e{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--glow)}
+#reel .rcap .t{font-family:var(--display);font-size:clamp(26px,4.4vw,52px);letter-spacing:.1em;text-transform:uppercase;margin-top:8px;line-height:1.1}
+#reel .rcap .n{display:none;font-size:11px;color:var(--sand);margin-top:12px;opacity:.75}
+#reel .rprog{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(70px,env(safe-area-inset-right,0px));display:flex;gap:4px}
+#reel .rprog i{flex:1;height:2px;background:rgba(244,238,230,.25);position:relative;overflow:hidden}
+#reel .rprog i b{position:absolute;inset:0;background:var(--cream);transform-origin:left;transform:scaleX(0)}
+#reel .rx{position:absolute;top:calc(6px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}
+
+/* ---------- superposiciones ---------- */
+#film{position:fixed;inset:0;z-index:46;background:#000;display:none}
+#film.on{display:block;animation:fadeIn .6s ease}
+#film video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
+#film .fx{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}
+.pk-bg{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:50% 94%;filter:brightness(.42) saturate(1.05);animation:kb 30s ease-in-out infinite alternate}
+.pk-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+@media (max-width:900px){.pk-grid{grid-template-columns:1fr}}
+.glass{background:rgba(29,25,21,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(220,205,189,.28);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.chg-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.chg-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.chgc{border:1px solid var(--line);border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:rgba(0,0,0,.2)}
+.chgc .disp{font-size:13px}
+.chgc small{font-size:11.5px;color:var(--sand)}
+.tl{display:flex;gap:6px;align-items:center}
+.tl i{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden;position:relative}
+.tl i b{position:absolute;inset:0;background:var(--glow);transform-origin:left;transform:scaleX(0);transition:transform .8s}
+.tlx{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sand)}
+#lift{position:fixed;inset:0;z-index:41;pointer-events:none;display:none}
+#lift.on{display:block;pointer-events:auto}
+#lift .door{position:absolute;top:0;bottom:0;width:50%;background:linear-gradient(90deg,#3b342d,#6f6253 30%,#8a7c6c 50%,#6f6253 70%,#3b342d);transition:transform .7s cubic-bezier(.7,0,.3,1)}
+#lift .l{left:0;transform:translateX(-100%);border-right:1px solid #b9a88f}
+#lift .r{right:0;transform:translateX(100%);border-left:1px solid #b9a88f}
+#lift.closed .l,#lift.closed .r{transform:none}
+#lift .disp2{position:absolute;left:50%;top:18%;transform:translateX(-50%);background:#14110e;border:1px solid #b9a88f;padding:14px 22px;text-align:center;opacity:0;transition:opacity .3s;min-width:220px;max-width:calc(100vw - 32px)}
+#lift.closed .disp2{opacity:1}
+#lift .arrow{font-size:22px;color:var(--glow);line-height:1}
+#lift .lvlname{font-family:var(--display);font-size:20px;letter-spacing:.2em;text-transform:uppercase;margin-top:6px}
+#toast{position:fixed;z-index:60;left:50%;top:calc(92px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--panel-solid);border:1px solid var(--line);padding:10px 14px;font-size:13.5px;line-height:1.45;max-width:min(460px,calc(100vw - 32px));opacity:0;transition:opacity .3s;pointer-events:none;border-radius:2px;text-align:center}
+#toast.on{opacity:1}
+
+#intro{position:fixed;inset:0;z-index:50;display:grid;place-items:center;overflow-y:auto;overflow-x:hidden;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px;background:#120f0c}
+#intro .bgv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.78}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{border:1px solid rgba(220,205,189,.35);background:rgba(18,15,12,.45);backdrop-filter:blur(6px);padding:8px 12px;border-radius:2px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.06em}
+.stat span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--sand)}
+.day{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.dcard{position:relative;border:1px solid var(--line);border-radius:3px;overflow:hidden;cursor:pointer;padding:0;background:#000;text-align:left;aspect-ratio:3/4;max-width:100%}
+.dcard img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 1.4s ease,opacity .6s;opacity:.85}
+.dcard:hover img{transform:scale(1.08);opacity:1}
+.dcard .dt{position:absolute;left:0;right:0;bottom:0;padding:60px 16px 16px;background:linear-gradient(transparent,rgba(10,8,6,.88));display:flex;flex-direction:column;gap:6px}
+.dcard .hr{font-family:var(--display);font-size:30px;letter-spacing:.06em;color:var(--glow);line-height:1}
+.dcard .tt{font-family:var(--display);font-size:16px;letter-spacing:.14em;text-transform:uppercase}
+.dcard .ds{font-size:13px;line-height:1.5;color:var(--muted)}
+.chips2{display:flex;gap:6px;flex-wrap:wrap}
+.price{font-family:var(--display);font-size:22px;letter-spacing:.06em;color:var(--glow)}
+#intro .bg2{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,15,12,.94) 0%,rgba(18,15,12,.72) 45%,rgba(18,15,12,.12) 100%)}
+.intro-in{position:relative;max-width:1040px;width:100%;display:flex;flex-direction:column;gap:24px;align-items:flex-start}
+.intro-in>*{max-width:600px}
+.intro-in .logo{font-family:var(--display);font-size:clamp(40px,8vw,72px);letter-spacing:.24em;line-height:1}
+.intro-in .logo-sub{font-size:12px;letter-spacing:.55em;text-transform:uppercase;color:var(--sand);border-top:1px solid rgba(220,205,189,.6);padding-top:8px;margin-top:10px}
+.intro-in h1{font-family:var(--display);font-weight:400;font-size:clamp(22px,3.6vw,32px);letter-spacing:.05em;line-height:1.3;margin:0;text-wrap:balance}
+.intro-in p{margin:0;font-size:15.5px;line-height:1.65;color:var(--muted)}
+.enter{display:inline-flex;align-items:center;gap:12px;background:var(--sand);color:var(--ink);border:0;border-radius:2px;padding:16px 24px;font-size:13px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;cursor:pointer}
+.enter:hover{background:var(--cream)}
+.enter svg{width:18px;height:18px}
+.quiet{background:none;border:0;color:var(--sand);font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;text-decoration:underline;text-underline-offset:4px;padding:8px 0}
+.intro-meta{font-size:11.5px;color:var(--taupe);letter-spacing:.06em;line-height:1.6}
+
+
+/* ---------- Descubrir (página cinematográfica) ---------- */
+#story{position:fixed;inset:0;z-index:48;overflow-y:auto;overflow-x:hidden;background:#100d0a;display:none;scroll-behavior:smooth}
+#story.on{display:block;animation:fadeIn .8s ease}
+.st-x{position:fixed;z-index:3;top:calc(12px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;gap:8px}
+.st-sec{position:relative;overflow:hidden}
+.st-in{position:relative;max-width:1180px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.st-hero{height:100svh;min-height:560px;display:flex;align-items:flex-end}
+.st-hero video,.st-bgimg{position:absolute;inset:-8% 0;width:100%;height:116%;object-fit:cover;will-change:transform}
+.st-hero::after,.st-full::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(16,13,10,.92),rgba(16,13,10,.15) 55%,rgba(16,13,10,.35))}
+.st-hero .st-in{z-index:1;padding-bottom:12vh;width:100%}
+.st-kicker{font-size:12px;letter-spacing:.45em;text-transform:uppercase;color:var(--glow)}
+.st-h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,7.5vw,104px);letter-spacing:.1em;line-height:1.02;text-transform:uppercase;margin:14px 0 0;text-wrap:balance}
+.st-h2{font-family:var(--display);font-weight:400;font-size:clamp(30px,4.6vw,62px);letter-spacing:.1em;line-height:1.06;text-transform:uppercase;margin:12px 0 0;text-wrap:balance}
+.st-p{font-size:clamp(15px,1.5vw,18px);line-height:1.75;color:var(--muted);max-width:56ch;margin:18px 0 0}
+.st-cue{margin-top:28px;font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--sand);display:flex;align-items:center;gap:10px}
+.st-cue i{width:1px;height:42px;background:linear-gradient(var(--glow),transparent);animation:cue 2s ease-in-out infinite}
+@keyframes cue{0%{transform:scaleY(.2);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}100%{transform:scaleY(.2);transform-origin:bottom}}
+.st-split{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center;padding-block:clamp(70px,12vw,150px)}
+.st-split.rev{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.st-split.rev .st-media{order:2}
+@media (max-width:820px){.st-split,.st-split.rev{grid-template-columns:1fr}.st-split.rev .st-media{order:0}}
+.st-media{position:relative;overflow:hidden;border-radius:2px;aspect-ratio:4/5;max-width:100%}
+.st-media img{position:absolute;inset:-10% 0;width:100%;height:120%;object-fit:cover;will-change:transform}
+.st-num{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border-block:1px solid var(--line)}
+@media (max-width:820px){.st-num{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.st-num div{background:#100d0a;padding:36px 20px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.st-num b{font-family:var(--display);font-weight:400;font-size:clamp(36px,4.6vw,58px);letter-spacing:.02em;color:var(--cream);line-height:1;font-variant-numeric:tabular-nums}
+.st-num span{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--sand)}
+.st-full{min-height:92vh;display:flex;align-items:flex-end}
+.st-full .st-in{z-index:1;padding-bottom:10vh;width:100%}
+.st-amen{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding-block:clamp(60px,10vw,120px)}
+@media (max-width:980px){.st-amen{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.st-amen{grid-template-columns:1fr}}
+.am{position:relative;overflow:hidden;border-radius:2px;min-height:420px;display:flex;align-items:flex-end;border:1px solid var(--line)}
+.am img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 1.6s ease;filter:brightness(.6)}
+.am:hover img{transform:scale(1.08)}
+.am .amt{position:relative;padding:22px;background:linear-gradient(transparent,rgba(10,8,6,.9) 40%);width:100%}
+.am h3{margin:0;font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.16em;text-transform:uppercase}
+.am ul{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
+.am li::before{content:"— ";color:var(--glow)}
+.st-day{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:10px max(20px,env(safe-area-inset-left,0px)) 30px;scrollbar-width:thin}
+.st-day .dcard{flex:0 0 min(320px,78vw);scroll-snap-align:start;aspect-ratio:3/4.2}
+.sun{display:inline-flex;gap:14px;align-items:center;border:1px solid rgba(231,194,144,.5);padding:14px 18px;border-radius:2px;background:rgba(16,13,10,.5);backdrop-filter:blur(8px);margin-top:22px;flex-wrap:wrap}
+.sun b{font-family:var(--display);font-weight:400;font-size:30px;letter-spacing:.06em;color:var(--glow)}
+.sun span{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--sand)}
+.st-film{position:relative;aspect-ratio:16/9;max-width:100%;border:1px solid var(--line);border-radius:2px;overflow:hidden;cursor:pointer;background:#000}
+.st-film img{width:100%;height:100%;object-fit:cover;opacity:.75;transition:transform 2s ease}
+.st-film:hover img{transform:scale(1.05)}
+.st-film .pl{position:absolute;inset:0;display:grid;place-items:center}
+.st-film .pl span{width:88px;height:88px;border-radius:50%;border:1px solid var(--cream);display:grid;place-items:center;background:rgba(16,13,10,.35);backdrop-filter:blur(4px)}
+.st-cta{padding-block:clamp(80px,14vw,170px);text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}
+.reveal{transform:translateY(26px);transition:transform 1.2s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{transform:none}
+
+/* ---------- registro previo ---------- */
+#gate{position:fixed;inset:0;z-index:70;display:grid;place-items:center;overflow-y:auto;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:#0f0c09}
+#gate video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;opacity:.42}
+#gate .gshade{position:fixed;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(15,12,9,.35),rgba(15,12,9,.9))}
+.gbox{position:relative;width:min(460px,100%);background:rgba(20,17,14,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(220,205,189,.3);border-radius:3px;padding:28px 24px;display:flex;flex-direction:column;gap:14px}
+.gbox .logo{font-family:var(--display);font-size:34px;letter-spacing:.26em;line-height:1}
+.gbox .lsub{font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:var(--sand);border-top:1px solid rgba(220,205,189,.5);padding-top:6px;margin-top:6px;width:max-content}
+.gbox h1{font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.06em;margin:6px 0 0}
+.gbox p{margin:0;font-size:13.5px;line-height:1.55;color:var(--muted)}
+.gf{display:flex;flex-direction:column;gap:5px}
+.gf label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--sand)}
+.gf input{background:rgba(244,238,230,.06);border:1px solid rgba(220,205,189,.3);color:var(--cream);padding:12px;border-radius:2px;font:inherit;font-size:15px}
+.gf input:focus{outline:none;border-color:var(--glow)}
+.gf .err{font-size:12px;color:#f0a58a;min-height:0}
+.gchk{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.gchk input{margin-top:3px;accent-color:#e7c290}
+.gnote{font-size:11.5px;line-height:1.55;color:var(--taupe);border-top:1px solid var(--line);padding-top:10px}
+.gtype{display:flex;gap:6px}
+@media (max-width:980px){
+  .guide{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+  .dock{left:max(16px,env(safe-area-inset-left,0px));justify-content:space-between}
+  .dock button{min-width:0;flex:1;padding:6px 1px;font-size:8px;letter-spacing:.04em}
+  .sheet{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:720px){
+  .brand .name{font-size:17px}
+  .brand .sub{font-size:8px;letter-spacing:.3em}
+  .where .place{font-size:12px;max-width:46vw}
+  .where .placesub{display:none}
+  .guide{padding:9px 11px;gap:7px}
+  .guide-text{font-size:13.5px;max-height:16vh}
+  .emblem{width:32px;height:32px}
+  .sheet{top:auto;max-height:66vh;left:max(16px,env(safe-area-inset-left,0px));width:auto}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<canvas id="gl" aria-label="Recorrido inmersivo de Aura Bay. Arrastre para mirar alrededor."></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="shade"></div><div class="lb t"></div><div class="lb b"></div>
+<section class="scene-html" id="sceneHtml" aria-live="polite"></section>
+<div id="pins"></div>
+<div id="chapter" aria-live="polite"><div class="ce" id="chE"></div><div class="ct" id="chT"></div><div class="cl"></div><div class="cs" id="chS"></div></div>
+
+<header class="top">
+  <div class="brand"><span class="name">AURA BAY</span><span class="sub">Luxury Residences</span></div>
+  <div class="where"><div class="place" id="place">Aura Bay</div><div class="placesub" id="placesub">Punta Centinela · Santa Elena</div></div>
+</header>
+
+<section class="guide" id="guide" aria-label="Guía del recorrido">
+  <div class="guide-head">
+    <div class="emblem" aria-hidden="true"><i></i><i></i><b></b></div>
+    <div class="guide-title"><span class="eyebrow" id="gStep">Su anfitriona en Aura Bay</span><span class="t" id="gTitle">Bienvenido</span></div>
+    <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+    <button class="btn iconbtn" id="gMin" aria-label="Minimizar guía"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 9l6 6 6-6"/></svg></button>
+  </div>
+  <div class="progress"><span id="gProg"></span></div>
+  <div class="guide-text" id="gText">Arrastre para mirar a su alrededor. Toque los puntos luminosos para entrar a cada espacio.</div>
+  <div class="guide-ctrl">
+    <button class="btn iconbtn" id="gPrev" aria-label="Parada anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <button class="btn" id="gPlay"></button>
+    <button class="btn iconbtn" id="gNext" aria-label="Siguiente parada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button class="btn iconbtn" id="gRepeat" aria-label="Repetir narración"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg></button>
+  </div>
+</section>
+
+<nav class="dock" aria-label="Controles">
+  <button id="dBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 6l-6 6 6 6M4 12h16"/></svg>Atrás</button>
+  <button id="dRooms" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Ambientes</button>
+  <button id="dLift" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18"/><path d="M12 3v18M9 9l-1.5 2h3zM15 13l1.5-2h-3z"/></svg>Ascensor</button>
+  <button id="dPlans" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h18v18H3zM3 12h8M11 3v13M15 12h6M15 12v9"/></svg>Residencias</button>
+  <button id="dMusic" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><span>Música</span></button>
+  <button id="dVoice" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg><span>Voz</span></button>
+  <button id="dFilm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg>Película</button><button id="dInfo" hidden></button>
+  <button id="dReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg>Inicio</button>
+</nav>
+
+<aside class="sheet" id="sheet" hidden>
+  <div class="sheet-h"><div><div class="eyebrow" id="sheetEy">Aura Bay</div><h2 id="sheetT">Panel</h2></div>
+    <button class="btn iconbtn" id="sheetX" aria-label="Cerrar panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sheet-b" id="sheetB"></div>
+</aside>
+
+<div id="reel" aria-label="Momentos Aura Bay"><div class="rbg" id="rbg"></div><img class="rimg" id="rA" alt=""><img class="rimg" id="rB" alt="">
+  <div class="rprog" id="rprog"></div>
+  <button class="btn iconbtn rx" id="rX" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="rcap"><div class="e" id="rE"></div><div class="t" id="rT"></div><div class="n">Fotografías ilustrativas del material del proyecto</div></div></div>
+
+<div id="film" aria-label="Película Aura Bay"><video id="filmV" controls playsinline preload="none" poster="img/fachada.jpg"></video><button class="btn iconbtn fx" id="filmX" aria-label="Cerrar película"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<div id="lift" aria-hidden="true"><div class="door l"></div><div class="door r"></div>
+  <div class="disp2"><div class="arrow" id="liftA">▲</div><div class="lvlname" id="liftL">Lobby</div></div></div>
+<div id="toast" role="status"></div>
+<section id="story" aria-label="Descubrir Aura Bay"></section>
+
+<div id="gate">
+  <video autoplay muted loop playsinline poster="img/fachada.jpg" src="img/intro-loop.mp4"></video><div class="gshade"></div>
+  <form class="gbox" id="gForm" novalidate>
+    <div><div class="logo">AURA BAY</div><div class="lsub">Luxury Residences</div></div>
+    <h1>Bienvenido al recorrido privado</h1>
+    <p>Para ingresar, regístrese una sola vez.</p>
+    <div class="gf"><label for="gName">Nombres y apellidos</label><input id="gName" autocomplete="name" required maxlength="120"><span class="err" id="eName"></span></div>
+    <div class="gf"><label for="gId">Documento de identidad</label><div class="gtype"><button type="button" class="tab" id="tCed" aria-selected="true">Cédula</button><button type="button" class="tab" id="tPas" aria-selected="false">Pasaporte</button></div><input id="gId" inputmode="numeric" autocomplete="off" required maxlength="20" placeholder="10 dígitos"><span class="err" id="eId"></span></div>
+    <div class="gf"><label for="gTel">Teléfono celular</label><input id="gTel" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="09XXXXXXXX"><span class="err" id="eTel"></span></div>
+    <label class="gchk"><input type="checkbox" id="gOk"><span>Autorizo el tratamiento de mis datos personales para registrar mi visita a este recorrido y recibir información sobre Aura Bay, conforme a la Ley Orgánica de Protección de Datos Personales.</span></label>
+    <span class="err" id="eOk" style="font-size:12px;color:#f0a58a"></span>
+    <button class="enter" type="submit" id="gGo" style="justify-content:center">Ingresar</button>
+    <div class="gnote">Sus datos se usan únicamente para registrar su visita y contactarle sobre el proyecto. No se comparten con terceros. Puede solicitar su acceso, rectificación o eliminación respondiendo a nuestra comunicación. Imágenes ilustrativas del proyecto.</div>
+  </form>
+</div>
+<div id="intro">
+  <video class="bgv" autoplay muted loop playsinline preload="auto" poster="img/fachada.jpg" src="img/intro-loop.mp4"></video><div class="bg2"></div>
+  <div class="intro-in">
+    <div><div class="logo">AURA BAY</div><div class="logo-sub">Luxury Residences</div></div>
+    <h1>La costa del Pacífico tiene un nuevo ícono</h1>
+    <p>Despierte frente al mar, termine el día con un atardecer sobre el Pacífico. Recorra Aura Bay con una anfitriona que le acompaña, música de playa y cada amenidad a un toque.</p>
+    <div class="stats"><div class="stat"><b>40 m</b><span>Frente al mar</span></div><div class="stat"><b>1 – 4</b><span>Dormitorios</span></div><div class="stat"><b>105</b><span>Residencias</span></div><div class="stat"><b>1 h 30</b><span>Desde Guayaquil</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+      <button class="enter" id="startStory"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Descubrir Aura Bay</button>
+      <button class="quiet" id="startOn">Recorrido guiado con voz</button>
+      <button class="quiet" id="startFilm">Ver la película · 1 min</button>
+      <button class="quiet" id="startOff">Entrar sin sonido</button>
+    </div>
+    <div class="intro-meta">Imágenes ilustrativas del proyecto. Recomendado con audífonos.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const IMG=n=>'img/'+n+'.jpg';
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const isTouch=matchMedia('(hover:none)').matches;
+
+/* ================= DATOS (material comercial del proyecto y portales públicos) ================= */
+const TIPOLOGIAS=[
+  {id:'01',d:3,m:['204,91','208,53'],img:'plano-01'},{id:'02',d:2,m:['103,80','107,85'],img:'plano-02'},{id:'03',d:2,m:['114,66','114,51'],img:'plano-03'},
+  {id:'04',d:3,m:['143,88','141,51'],img:'plano-04'},{id:'05',d:2,m:['110,70','122,47'],img:'plano-05'},{id:'06',d:1,m:['88,47','82,67'],img:'plano-06'},{id:'2A',d:4,m:['218,31','222,51'],img:'plano-2a'}];
+
+/* ================= ESCENAS ================= */
+// mode: 'look' = girar la mirada dentro del render (perspectiva real); 'flat' = paneo cinematográfico
+const SC={
+  fachada:{img:'fachada',mode:'flat',night:1,fx:[],t:'Aura Bay frente al Pacífico',sub:'Punta Centinela · noche',lv:'ext',fx0:.62,fy0:.32,
+    hot:[{x:73,y:36,l:'Residencias',s:'Departamento modelo',go:'salacomedor'},{x:26,y:60,l:'Ascensor panorámico',s:'Puente hacia la playa',go:'playa'},{x:47,y:70,l:'Beach club',s:'Terrazas sobre la arena',go:'beachclub'},{x:80,y:22,l:'Arquitectura',s:'Balcones curvos',go:'torre'},{x:52,y:84,l:'La playa',s:'Experiencia mar',go:'playa'}]},
+  torre:{img:'torre',mode:'flat',night:1,fx:[],t:'Arquitectura frente al mar',sub:'Fachada contemporánea',lv:'ext',fx0:.5,fy0:.25,
+    hot:[{x:44,y:24,l:'Balcones curvos',s:'Vista al océano',go:'balcones'},{x:85,y:60,l:'Sala de ventas',s:'Maqueta',go:'maqueta'},{x:67,y:91,l:'Entrada principal',s:'Lobby y recepción',go:'lobby'},{x:21,y:95,l:'Parqueos',s:'Gemelo digital',go:'parqueo'},{x:45,y:5,l:'Rooftop panorámico',s:'Amenidad',info:'rooftop'}]},
+  lobby:{img:'lobby',mode:'look',hfov:80,fx:[],t:'Lobby y recepción',sub:'Concierge · seguridad 24/7',lv:'lob',
+    hot:[{x:41,y:58,l:'Concierge',s:'Recepción',info:'concierge'},{x:76,y:63,l:'Lounge',s:'Espera y encuentro',info:'lounge'},{x:22,y:44,l:'App de residentes',s:'Servicios en su teléfono',info:'app'},{x:50,y:12,l:'Diseño del lobby',s:'Concepto y materiales',panel:'lobbydesign'},{x:63,y:38,l:'Vista panorámica',s:'Recorrer el lobby',go:'lobbypano'},{x:6,y:55,l:'Ascensores',s:'Elegir destino',lift:true},{x:94,y:52,l:'Gimnasio',s:'Mismo nivel',go:'gimnasio'},{x:92,y:30,l:'Salir',s:'Fachada',go:'torre'}]},
+  lobbypano:{img:'lobby-panorama',mode:'look',hfov:140,fx:[],t:'Lobby panorámico',sub:'Render en proceso',lv:'lob',
+    hot:[{x:52,y:62,l:'Recepción',s:'Counter curvo',info:'counter'},{x:88,y:66,l:'Lounge',s:'Mobiliario curvo',info:'lounge'},{x:93,y:36,l:'Arte orgánico',s:'Elemento decorativo',info:'arte'},{x:30,y:60,l:'Vista frontal',s:'Volver',go:'lobby'},{x:8,y:45,l:'Diseño del lobby',s:'Concepto y materiales',panel:'lobbydesign'}]},
+  salacomedor:{img:'sala-comedor',mode:'look',hfov:85,fx:[],rays:'right',t:'Sala y comedor',sub:'Departamento modelo',lv:'res',
+    hot:[{x:29,y:52,l:'Comedor y cocina',s:'Integrados',go:'cocina'},{x:74,y:42,l:'Vista al mar',s:'Salir al balcón',go:'balcones'},{x:52,y:67,l:'Sala',s:'Otra perspectiva',go:'sala'},{x:12,y:40,l:'Estar',s:'Con terraza',go:'estar'},{x:40,y:30,l:'Dormitorio',s:'Entrar',go:'dormitorio'},{x:88,y:18,l:'Planos',s:'Tipologías',panel:'plans'}]},
+  sala:{img:'sala',mode:'look',hfov:95,fx:[],rays:'left',t:'Sala con vista al Pacífico',sub:'Departamento modelo',lv:'res',
+    hot:[{x:9,y:45,l:'Ventanal al mar',s:'Ir a los balcones',go:'balcones'},{x:55,y:72,l:'Sala y comedor',s:'Volver',go:'salacomedor'}]},
+  estar:{img:'estar',mode:'look',hfov:80,fx:[],rays:'center',t:'Estar con terraza',sub:'Departamento modelo',lv:'res',
+    hot:[{x:55,y:47,l:'Terraza',s:'Exterior privado',info:'terraza'},{x:46,y:73,l:'Sala',s:'Volver',go:'salacomedor'}]},
+  cocina:{img:'cocina',mode:'look',hfov:95,fx:[],rays:'right',t:'Cocina y comedor',sub:'Departamento modelo',lv:'res',
+    hot:[{x:31,y:44,l:'Cocina',s:'Abierta al área social',info:'cocina'},{x:56,y:72,l:'Comedor',s:'Para compartir',info:'comedor'},{x:86,y:42,l:'Vista al mar',s:'Ir a los balcones',go:'balcones'},{x:6,y:52,l:'Sala',s:'Volver',go:'salacomedor'}]},
+  balcones:{img:'balcones',mode:'look',hfov:80,fx:['birds'],t:'Balcones sobre el océano',sub:'Vista desde lo alto',lv:'res',
+    hot:[{x:86,y:62,l:'Balcones',s:'Cada nivel mira al mar',info:'balcon'},{x:75,y:65,l:'Terraza con piscina',s:'Al atardecer',go:'atardecer'},{x:32,y:55,l:'El Pacífico',s:'Bajar a la playa',go:'playa'},{x:55,y:30,l:'Interiores',s:'Volver a la sala',go:'salacomedor'},{x:20,y:25,l:'Un día en Aura Bay',s:'Imagine su vida aquí',go:'undia'}]},
+  atardecer:{img:'atardecer',mode:'look',hfov:85,fx:['birds'],t:'Terraza al atardecer',sub:'Social y lifestyle',lv:'roof',
+    hot:[{x:72,y:40,l:'Atardecer de hoy',s:'Hora real en Punta Centinela',info:'sunset'},{x:50,y:77,l:'Piscina',s:'Borde hacia el mar',info:'rooftoppool'},{x:20,y:30,l:'Terraza superior',s:'Rooftop panorámico',info:'rooftop'},{x:63,y:72,l:'La playa',s:'Bajar',go:'playa'}]},
+  gimnasio:{img:'gimnasio',mode:'look',hfov:80,fx:[],rays:'left',t:'Gimnasio equipado',sub:'Nivel del lobby',lv:'lob',
+    hot:[{x:38,y:63,l:'Gimnasio equipado',s:'Cardio y fuerza',info:'gym'},{x:80,y:78,l:'Pilates y estiramiento',s:'Amenidad',info:'pilates'},{x:60,y:48,l:'Entrenador personal',s:'Servicio',info:'entrenador'},{x:94,y:30,l:'Spa y bienestar',s:'Siguiente',go:'bienestar'},{x:4,y:40,l:'Lobby',s:'Volver',go:'lobby'}]},
+  social:{img:'social',mode:'look',hfov:80,fx:[],rays:'center',t:'Sala de juegos y áreas sociales',sub:'Social y lifestyle',lv:'soc',
+    hot:[{x:55,y:66,l:'Área de juegos',s:'Amenidad',info:'juegos'},{x:83,y:60,l:'Barra',s:'Carta digital',panel:'menu'},{x:67,y:45,l:'Restaurante',s:'Platos y cocteles',go:'restaurante'},{x:52,y:48,l:'Terraza',s:'Ir a la piscina',go:'piscina'}]},
+  piscina:{img:'piscina',mode:'look',hfov:72,fx:['birds'],t:'Piscina y solárium',sub:'Frente al mar',lv:'bea',
+    hot:[{x:47,y:58,l:'Piscina',s:'Amenidad',info:'piscina'},{x:37,y:39,l:'Ascensor panorámico',s:'Hacia la playa',go:'playa'},{x:89,y:43,l:'Bar',s:'Terraza con bar',go:'terrazabar'},{x:66,y:66,l:'Camastros',s:'Servicio de toallas',info:'piscina'}]},
+  beachclub:{img:'beachclub',mode:'look',hfov:85,fx:['birds'],t:'Beach club',sub:'Experiencia mar',lv:'bea',
+    hot:[{x:47,y:73,l:'Piscina',s:'Junto a la arena',go:'piscina'},{x:84,y:52,l:'Restaurante y bar',s:'Experiencias gastronómicas',go:'restaurante'},{x:38,y:47,l:'La playa',s:'Bajar a la arena',go:'playa'},{x:8,y:30,l:'Fachada',s:'Volver al edificio',go:'fachada'}]},
+  playa:{img:'playa',mode:'flat',fx:['birds'],t:'Beach club y acceso a la playa',sub:'Playa prácticamente privada',lv:'bea',fx0:.45,fy0:.45,
+    hot:[{x:60,y:50,l:'Piscinas',s:'Ver de cerca',go:'piscina'},{x:45,y:33,l:'Ascensor panorámico',s:'Conecta con la playa',info:'ascensorpan'},{x:24,y:56,l:'Deportes acuáticos',s:'Kayak · remo · hidroala',info:'mar'},{x:36,y:72,l:'Mobiliario de playa',s:'Servicio de toallas',info:'piscina'},{x:79,y:76,l:'Pérgolas',s:'Beach club',go:'beachclub'}]},
+  torredia:{img:'torre-dia',mode:'flat',fx:['birds'],t:'La torre al amanecer',sub:'Fachada',lv:'ext',fx0:.5,fy0:.3,
+    hot:[{x:52,y:30,l:'Balcones curvos',s:'Vista al océano',go:'balcones'},{x:50,y:93,l:'Entrada principal',s:'Lobby',go:'lobby'},{x:50,y:5,l:'Terrazas superiores',s:'Al atardecer',go:'atardecer'}]},
+  maqueta:{img:'maqueta',mode:'look',hfov:85,fx:[],t:'Sala de ventas',sub:'Maqueta del proyecto',lv:'ext',
+    hot:[{x:42,y:42,l:'Maqueta de Aura Bay',s:'Torre y beach club',info:'maqueta'},{x:80,y:55,l:'Sala de ventas',s:'Punta Centinela km 10,5',info:'ventas'},{x:8,y:50,l:'Ver la torre',s:'Fachada',go:'torredia'}]},
+  sala2:{img:'sala-2',mode:'look',hfov:90,fx:[],t:'Sala amplia',sub:'Departamento modelo',lv:'res',
+    hot:[{x:28,y:38,l:'Cocina con isla',s:'Ver comedor y cocina',go:'comedorcocina'},{x:86,y:40,l:'Vista al mar',s:'Ir a los balcones',go:'balcones'},{x:52,y:64,l:'Sala',s:'Mobiliario curvo',info:'sala'}]},
+  sala3:{img:'sala-3',mode:'look',hfov:85,fx:[],t:'Sala y estar',sub:'Departamento modelo',lv:'res',
+    hot:[{x:28,y:64,l:'Comedor y cocina',s:'Integrados',go:'comedorcocina'},{x:70,y:38,l:'Vista al mar',s:'Ir a los balcones',go:'balcones'},{x:88,y:55,l:'Dormitorio',s:'Entrar',go:'dormitorio'}]},
+  comedorcocina:{img:'comedor-cocina',mode:'look',hfov:85,fx:[],t:'Comedor y cocina',sub:'Departamento modelo',lv:'res',
+    hot:[{x:30,y:44,l:'Vista al mar',s:'Ir a los balcones',go:'balcones'},{x:78,y:62,l:'Cocina',s:'Isla en piedra',info:'cocina'},{x:52,y:72,l:'Comedor',s:'Para compartir',info:'comedor'},{x:6,y:50,l:'Dormitorio',s:'Entrar',go:'dormitorio'}]},
+  dormitorio:{img:'dormitorio',mode:'look',hfov:85,fx:[],t:'Dormitorio',sub:'Departamento modelo',lv:'res',
+    hot:[{x:16,y:40,l:'Vista al mar',s:'Ir a los balcones',go:'balcones'},{x:56,y:64,l:'Dormitorio',s:'Descanso frente al mar',info:'dormitorio'},{x:84,y:30,l:'Planos',s:'Dormitorios por tipología',panel:'plans'},{x:94,y:62,l:'Sala',s:'Volver',go:'sala3'}]},
+  terrazabar:{img:'terraza-bar',mode:'look',hfov:85,fx:['birds'],t:'Terraza con bar y piscina',sub:'Social y lifestyle',lv:'bea',
+    hot:[{x:32,y:48,l:'Bar de la terraza',s:'Carta digital',panel:'menu'},{x:22,y:76,l:'Piscina',s:'Borde infinito',info:'piscina'},{x:56,y:56,l:'Camastros',s:'Servicio de toallas',info:'piscina'},{x:86,y:68,l:'Beach club',s:'Siguiente',go:'beachclub'}]},
+  restaurante:{img:'restaurante',mode:'look',hfov:95,fx:[],t:'Restaurante y bar',sub:'Experiencias gastronómicas',lv:'soc',
+    hot:[{x:50,y:42,l:'Barra',s:'Carta digital',panel:'menu'},{x:62,y:56,l:'Platos y cocteles',s:'Ver momentos',reel:'gastro'},{x:24,y:62,l:'Mesas',s:'Al aire libre',info:'restaurante'},{x:92,y:44,l:'Sala de juegos',s:'Áreas sociales',go:'social'}]},
+  undia:{html:'undia',t:'Un día en Aura Bay',sub:'Imagine su vida aquí',lv:'ext'},
+  bienestar:{html:'bienestar',t:'Spa y bienestar',sub:'Bienestar y relax',lv:'spa'},
+  parqueo:{html:'parqueo',t:'Parqueo digital',sub:'Gemelo digital · valet · carga',lv:'par'},
+  beneficios:{html:'beneficios',t:'Beneficios exclusivos',sub:'Para propietarios',lv:'ext'},
+};
+const LEVELS=[
+  {k:'roof',name:'Terrazas y rooftop',sub:'Piscina al atardecer',sc:'atardecer'},
+  {k:'res',name:'Residencias',sub:'Departamento modelo',sc:'salacomedor'},
+  {k:'soc',name:'Restaurante y áreas sociales',sub:'Bar · juegos',sc:'restaurante'},
+  {k:'spa',name:'Spa y bienestar',sub:'Sauna · turco · hidromasaje',sc:'bienestar'},
+  {k:'lob',name:'Lobby y gimnasio',sub:'Recepción · business center',sc:'lobby'},
+  {k:'par',name:'Parqueos',sub:'Valet · carga eléctrica',sc:'parqueo'},
+  {k:'bea',name:'Beach club y playa',sub:'Terraza con bar · piscina · arena',sc:'terrazabar'},
+];
+const INFO={
+  rooftop:['Rooftop panorámico','El proyecto anuncia rooftop panorámico y rooftop pool dentro de «Social & lifestyle», junto a jacuzzis, piscina de niños, zona de fogata, áreas BBQ, horno italiano y área de juegos.',null],
+  rooftoppool:['Piscina con vista al mar','Piscinas que se funden con el horizonte del Pacífico. Imagen ilustrativa.',null],
+  concierge:['Concierge y seguridad 24/7','Concierge, seguridad 24/7, business center y una aplicación de servicios para residentes.','app'],
+  lounge:['Lounge del lobby','Mobiliario curvo, tapicería clara y piezas en madera taupe, dentro del concepto «Formas de la naturaleza».',null],
+  app:['App de servicios para residentes','Para gestionar servicios desde el teléfono: valet, reservas y solicitudes al concierge.','app'],
+  terraza:['Terraza','Ambiente exterior del departamento modelo, según la tipología.',null],
+  cocina:['Cocina integrada','Cocina abierta al comedor y a la sala, con vista al mar. Acabados ilustrativos.',null],
+  comedor:['Comedor','Comedor frente a ventanales con vista al Pacífico.',null],
+  balcon:['Balcones','Balcones curvos hacia el mar y terrazas a lo largo de toda la torre.',null],
+  gym:['Gimnasio equipado','Dentro de «Deporte & salud», junto al área de pilates y el cold plunge.',null],
+  pilates:['Área de pilates','Espacio para pilates y estiramiento con luz natural.',null],
+  entrenador:['Entrenador personal','Servicio disponible para residentes.',null],
+  juegos:['Área de juegos','Sala de juegos con terraza y vista al mar.',null],
+  piscina:['Piscina','Piscina con solárium, camastros y sombrillas frente al mar, con servicio de toallas.',null],
+  mar:['Experiencia mar','Beach club, deportes acuáticos, kayak, paddleboard, tabla eléctrica de hidroala y mobiliario de playa.',null],
+  ascensorpan:['Ascensor panorámico','Un ascensor acristalado con puente conecta el edificio con la playa.',null],
+  counter:['Recepción','Counter curvo revestido en piezas acanaladas color hueso, con cubierta ultracompacta en tono concha. Detrás, panel texturizado con motivo de palmas y librero iluminado.',null],
+  restaurante:['Restaurante','Mesas al aire libre bajo una gran cubierta curva, barra con coctelería de autor y vista al atardecer. Render en proceso.',null],
+  dormitorio:['Dormitorio','Dormitorios con ventanales hacia el mar, cabeceras tapizadas y arte orgánico. El proyecto ofrece de 1 a 4 dormitorios.',null],
+  sala:['Sala','Mobiliario curvo, tonos arena y luz natural hacia el Pacífico.',null],
+  maqueta:['Maqueta de Aura Bay','Maqueta física del proyecto: la torre de balcones curvos, el beach club y las piscinas frente a la playa.',null],
+  ventas:['Sala de ventas','Punta Centinela, km 10,5 de la Ruta del Spondylus, Santa Elena.',null],
+  arte:['Arte orgánico','Piezas de formas orgánicas, en la línea del concepto «Formas de la naturaleza».',null],
+};
+const REELS={
+  mar:{e:'Experiencia mar',items:[['playa','La playa de Aura Bay'],['terraza-bar','Terraza con bar y piscina'],['beachclub','Beach club'],['piscina','Solárium frente al mar']]},
+  gastro:{e:'Experiencias gastronómicas',items:[['clip-coctel.mp4','Coctelería de autor'],['restaurante','Restaurante al aire libre'],['clip-flambe.mp4','Cocina en vivo'],['clip-emplatado.mp4','Sabores del Pacífico']]},
+};
+
+/* ================= MOTOR WEBGL: mirada inmersiva + imagen viva ================= */
+const cv=$('gl');let gl=null;try{gl=cv.getContext('webgl2',{antialias:false,alpha:false,premultipliedAlpha:false,preserveDrawingBuffer:false});}catch(e){}
+let W=innerWidth,H=innerHeight,DPR=Math.min(devicePixelRatio||1,isTouch?1.6:1.75);
+function resize(){W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);fxc.width=Math.round(W*Math.min(DPR,1.5));fxc.height=Math.round(H*Math.min(DPR,1.5));layers.forEach(fitLayer);}
+const VS=`#version 300 es
+in vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+const FS=`#version 300 es
+precision highp float;
+uniform sampler2D uTex,uMask;uniform vec2 uRes,uImg;uniform int uMode;uniform vec4 uCam;uniform float uTanH,uTime,uAlpha,uHasMask,uNight,uFx,uDpr;
+out vec4 o;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+vec2 mapUV(vec2 px,out float inside){
+  inside=1.;
+  if(uMode==0){vec2 uv=(px-uRes*.5)/(uImg*uCam.z)+uCam.xy;return uv;}
+  vec2 n=(px/uRes)*2.-1.;float a=uRes.x/uRes.y;
+  vec3 d=normalize(vec3(n.x*uCam.z*a,-n.y*uCam.z,-1.));
+  float cp=cos(uCam.y),sp=sin(uCam.y);d=vec3(d.x,d.y*cp-d.z*sp,d.y*sp+d.z*cp);
+  float cy=cos(uCam.x),sy=sin(uCam.x);d=vec3(d.x*cy-d.z*sy,d.y,d.x*sy+d.z*cy);
+  if(d.z>-.01){inside=0.;return vec2(.5);}
+  vec2 q=d.xy/(-d.z);float tanV=uTanH*uImg.y/uImg.x;
+  return vec2(.5+q.x/(2.*uTanH),.5-q.y/(2.*tanV));
+}
+void main(){
+  vec2 px=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y);
+  float ins;vec2 uv=mapUV(px,ins);
+  bool out_=ins<.5||uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.;
+  vec3 col;float t=uTime;
+  if(out_){col=textureLod(uTex,clamp(uv,0.,1.),6.5).rgb*.55;}
+  else{
+    col=texture(uTex,uv).rgb;
+  }
+  vec2 q=px/uRes;
+  col=mix(col,col*vec3(1.03,1.,.96),.5);
+  float vig=smoothstep(1.2,.35,length((q-.5)*vec2(1.1,1.25)));col*=mix(.82,1.,vig);
+  o=vec4(col,uAlpha);
+}`;
+let prog,U={},quad;
+function initGL(){if(!gl)return false;
+  const sh=(ty,src)=>{const s=gl.createShader(ty);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(s));return null;}return s;};
+  const v=sh(gl.VERTEX_SHADER,VS),f=sh(gl.FRAGMENT_SHADER,FS);if(!v||!f)return false;
+  prog=gl.createProgram();gl.attachShader(prog,v);gl.attachShader(prog,f);gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))return false;
+  gl.useProgram(prog);quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  const loc=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  ['uTex','uMask','uRes','uImg','uMode','uCam','uTanH','uTime','uAlpha','uHasMask','uNight','uFx','uDpr'].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
+  gl.uniform1i(U.uTex,0);gl.uniform1i(U.uMask,1);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);return true;}
+const glOK=initGL();
+const blank=glOK?(()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));return t;})():null;
+function mkTex(img){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  const ext=gl.getExtension('EXT_texture_filter_anisotropic');if(ext)gl.texParameterf(gl.TEXTURE_2D,ext.TEXTURE_MAX_ANISOTROPY_EXT,4);return t;}
+const imgCache={};
+function loadImg(src){if(imgCache[src])return imgCache[src];imgCache[src]=new Promise((res,rej)=>{const im=new Image();im.decoding='async';im.onload=()=>res(im);im.onerror=()=>{delete imgCache[src];rej(new Error(src));};im.src=src;});return imgCache[src];}
+const MASKS={};
+const texCache={};
+async function getTex(name){if(texCache[name])return texCache[name];const im=await loadImg(IMG(name));let mk=null;if(MASKS[name]){try{mk=await loadImg('mask/'+name+'.png');}catch(e){}}
+  const o={img:im,iw:im.naturalWidth,ih:im.naturalHeight,tex:glOK?mkTex(im):null,mask:(glOK&&mk)?mkTex(mk):null};texCache[name]=o;return o;}
+
+/* ----- cámaras ----- */
+let layers=[];
+function fitMode(L){return (L.iw/L.ih)<(W/H)*0.62;}
+function flatScale(L){return fitMode(L)?Math.min(H/L.ih*1.04,W/L.iw)*L.zoom:Math.max(W/L.iw,H/L.ih)*L.zoom;}
+function unproject(L,px,py){ // pantalla -> uv imagen (solo modo look)
+  const a=W/H,nx=px/W*2-1,ny=py/H*2-1;let x=nx*L.tanV*a,y=-ny*L.tanV,z=-1;const l=Math.hypot(x,y,z);x/=l;y/=l;z/=l;
+  const cp=Math.cos(L.pitch),sp=Math.sin(L.pitch);let y2=y*cp-z*sp,z2=y*sp+z*cp;y=y2;z=z2;
+  const cy=Math.cos(L.yaw),sy=Math.sin(L.yaw);const x2=x*cy-z*sy;z2=x*sy+z*cy;x=x2;z=z2;
+  if(z>-0.01)return null;const qx=x/(-z),qy=y/(-z);const tanVi=L.tanH*L.ih/L.iw;return [.5+qx/(2*L.tanH),.5-qy/(2*tanVi)];}
+function project(L,u,v){
+  if(L.mode==='flat'){const s=flatScale(L);return [(u-L.cx)*L.iw*s+W/2,(v-L.cy)*L.ih*s+H/2];}
+  const tanVi=L.tanH*L.ih/L.iw;let x=(u-.5)*2*L.tanH,y=(.5-v)*2*tanVi,z=-1;
+  const cy=Math.cos(-L.yaw),sy=Math.sin(-L.yaw);let x2=x*cy-z*sy,z2=x*sy+z*cy;x=x2;z=z2;
+  const cp=Math.cos(-L.pitch),sp=Math.sin(-L.pitch);let y2=y*cp-z*sp;z2=y*sp+z*cp;y=y2;z=z2;
+  if(z>-0.01)return null;const a=W/H;const nx=(x/(-z))/(L.tanV*a),ny=-(y/(-z))/L.tanV;return [(nx+1)/2*W,(ny+1)/2*H];}
+function lookValid(L){const pts=[[0,0],[W,0],[0,H],[W,H],[W/2,0],[W/2,H],[0,H/2],[W,H/2]];for(const [x,y] of pts){const uv=unproject(L,x,y);if(!uv||uv[0]<0.002||uv[0]>0.998||uv[1]<0.002||uv[1]>0.998)return false;}return true;}
+function fitLayer(L){
+  if(L.mode==='look'){const y0=L.yaw,p0=L.pitch;L.yaw=0;L.pitch=0;let lo=0.05,hi=3;for(let i=0;i<30;i++){const m=(lo+hi)/2;L.tanV=m;if(lookValid(L))lo=m;else hi=m;}L.tanVmax=lo;L.tanV=Math.min(L.tanVt||lo*0.86,lo*0.98);L.tanVt=L.tanV;L.yaw=y0;L.pitch=p0;clampLook(L);}
+  else clampFlat(L);}
+function clampLook(L){if(lookValid(L))return;const y=L.yaw,p=L.pitch;for(let k=1;k<=20;k++){const f=1-k/20;L.yaw=y*f;L.pitch=p*f;if(lookValid(L))return;}L.yaw=0;L.pitch=0;}
+function clampFlat(L){const s=flatScale(L);const hw=W/(2*L.iw*s),hh=H/(2*L.ih*s);L.cx=hw>=.5?.5:Math.min(1-hw,Math.max(hw,L.cx));L.cy=hh>=.5?.5:Math.min(1-hh,Math.max(hh,L.cy));return [Math.min(hw,.5),Math.min(hh,.5)];}
+function mkLayer(T,sc){const L={sc,tex:T.tex,mask:T.mask,iw:T.iw,ih:T.ih,img:T.img,mode:sc.mode||'flat',night:sc.night?1:0,op:0,dying:false,
+  cx:sc.fx0??.5,cy:sc.fy0??.5,zoom:1.18,tz:1.08,yaw:0,pitch:0,tanH:Math.tan((sc.hfov||80)*Math.PI/360),tanV:1,tanVt:null,vx:Math.random()<.5?-1:1,vy:1};
+  if(L.mode==='look'){fitLayer(L);L.tanVt=L.tanVmax*0.84;L.tanV=L.tanVmax*0.97;L.yaw=0;}else clampFlat(L);return L;}
+function top(){for(let i=layers.length-1;i>=0;i--)if(!layers[i].dying)return layers[i];return null;}
+
+/* ----- interacción ----- */
+let dragging=false,lastP=null,pointers=new Map(),pinch0=null,lastInteract=0,vel=[0,0];
+cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId);}catch(_){}pointers.set(e.pointerId,[e.clientX,e.clientY]);dragging=true;cv.classList.add('drag');lastP=[e.clientX,e.clientY];lastInteract=performance.now();vel=[0,0];
+  if(pointers.size===2){const p=[...pointers.values()];const L=top();pinch0={d:Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]),z:L?(L.mode==='look'?L.tanVt:L.tz):1};}});
+cv.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,[e.clientX,e.clientY]);const L=top();if(!L||L.fly)return;lastInteract=performance.now();
+  if(pointers.size===2&&pinch0){const p=[...pointers.values()];const d=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]);if(L.mode==='look')L.tanVt=Math.min(L.tanVmax*.98,Math.max(L.tanVmax*.4,pinch0.z*pinch0.d/d));else L.tz=Math.min(2.4,Math.max(1,pinch0.z*d/pinch0.d));return;}
+  const dx=e.clientX-lastP[0],dy=e.clientY-lastP[1];lastP=[e.clientX,e.clientY];drag(L,dx,dy);vel=[dx,dy];});
+function drag(L,dx,dy){if(L.mode==='look'){const k=2*L.tanV/H;const y0=L.yaw,p0=L.pitch;L.yaw-=dx*k*0.9;if(!lookValid(L))L.yaw=y0;L.pitch+=dy*k*0.9;if(!lookValid(L))L.pitch=p0;}
+  else{const s=flatScale(L);L.cx-=dx/(L.iw*s);L.cy-=dy/(L.ih*s);clampFlat(L);}}
+const up=e=>{pointers.delete(e.pointerId);if(pointers.size<2)pinch0=null;if(pointers.size===0){dragging=false;cv.classList.remove('drag');}};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{const L=top();if(!L)return;if(L.mode==='look')L.tanVt=Math.min(L.tanVmax*.98,Math.max(L.tanVmax*.4,L.tanVt*(1+e.deltaY*0.0012)));else L.tz=Math.min(2.4,Math.max(1,L.tz-e.deltaY*0.0012));lastInteract=performance.now();},{passive:true});
+addEventListener('resize',resize);
+
+/* ----- partículas: aves, polvo en la luz, rayos, luciérnagas ----- */
+const fxc=$('fx'),fctx=fxc.getContext('2d');let FX={kind:[],birds:[],dust:[],flies:[],rays:'right'};
+function setupFX(sc){FX={kind:sc&&sc.fx?sc.fx:[],rays:sc&&sc.rays||'right',birds:[],dust:[],flies:[]};
+  const w=fxc.width,h=fxc.height;
+  if(FX.kind.includes('birds'))for(let i=0;i<5;i++)FX.birds.push({x:Math.random()*w,y:h*(.08+Math.random()*.22),s:(.6+Math.random()*.6)*Math.min(1.4,w/1200+.4),v:(18+Math.random()*22)*(Math.random()<.5?1:-1),ph:Math.random()*6});
+  if(FX.kind.includes('dust'))for(let i=0;i<60;i++)FX.dust.push({x:Math.random()*w,y:Math.random()*h,r:.6+Math.random()*1.8,vx:(Math.random()-.5)*6,vy:-2-Math.random()*5,a:.15+Math.random()*.35,ph:Math.random()*6});
+  if(FX.kind.includes('fireflies'))for(let i=0;i<34;i++)FX.flies.push({x:Math.random()*w,y:h*(.62+Math.random()*.3),ph:Math.random()*6,r:1+Math.random()*1.8});}
+function drawFX(dt,t){const w=fxc.width,h=fxc.height,c=fctx;c.clearRect(0,0,w,h);if(!FX.kind.length||$('sceneHtml').classList.contains('on'))return;const sc=w/W;
+  if(FX.kind.includes('rays')){c.save();c.globalCompositeOperation='lighter';const side=FX.rays;const ox=side==='left'?w*.05:side==='center'?w*.5:w*.95;
+    for(let i=0;i<4;i++){const a=.05+.035*Math.sin(t*.25+i*1.7);const ang=(side==='left'?.55:side==='center'?0:-.55)+(i-1.5)*.12;c.save();c.translate(ox,-h*.05);c.rotate(ang);const g=c.createLinearGradient(0,0,0,h*1.3);g.addColorStop(0,`rgba(255,226,180,${a})`);g.addColorStop(1,'rgba(255,226,180,0)');c.fillStyle=g;c.beginPath();c.moveTo(-w*.02,0);c.lineTo(w*.02,0);c.lineTo(w*.12,h*1.3);c.lineTo(-w*.12,h*1.3);c.closePath();c.fill();c.restore();}c.restore();}
+  for(const d of FX.dust){d.x+=(d.vx+Math.sin(t*.5+d.ph)*4)*dt*sc;d.y+=d.vy*dt*sc;if(d.y<-5){d.y=h+5;d.x=Math.random()*w;}if(d.x<-5)d.x=w+5;if(d.x>w+5)d.x=-5;const al=d.a*(.5+.5*Math.sin(t*1.2+d.ph));c.fillStyle=`rgba(255,240,215,${al})`;c.beginPath();c.arc(d.x,d.y,d.r*sc,0,7);c.fill();}
+  for(const f of FX.flies){f.x+=Math.sin(t*.4+f.ph)*10*dt*sc;f.y+=Math.cos(t*.3+f.ph)*6*dt*sc;const al=.25+.75*Math.max(0,Math.sin(t*1.6+f.ph));const g=c.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r*6*sc);g.addColorStop(0,`rgba(255,214,150,${.55*al})`);g.addColorStop(1,'rgba(255,214,150,0)');c.fillStyle=g;c.beginPath();c.arc(f.x,f.y,f.r*6*sc,0,7);c.fill();}
+  c.save();c.globalCompositeOperation='source-over';
+  for(const b of FX.birds){b.x+=b.v*dt*sc;b.y+=Math.sin(t*.7+b.ph)*4*dt*sc;if(b.v>0&&b.x>w+40)b.x=-40;if(b.v<0&&b.x<-40)b.x=w+40;const flap=Math.sin(t*7+b.ph)*.9;const s=10*b.s*sc;
+    c.strokeStyle='rgba(30,26,22,.55)';c.lineWidth=1.6*sc;c.beginPath();c.moveTo(b.x-s,b.y-flap*s*.5);c.quadraticCurveTo(b.x-s*.4,b.y-s*.25-flap*s*.3,b.x,b.y);c.quadraticCurveTo(b.x+s*.4,b.y-s*.25-flap*s*.3,b.x+s,b.y-flap*s*.5);c.stroke();}
+  c.restore();}
+
+/* ----- bucle de render ----- */
+let lastT=0,tStart=performance.now();
+function frame(now){const dt=Math.min(.05,lastT?(now-lastT)/1000:.016);lastT=now;const T=top();const t=(now-tStart)/1000;
+  for(const L of layers){
+    L.op+=((L.dying?0:1)-L.op)*Math.min(1,dt*(L.dying?2.6:2.0));
+    if(L.fly){const k=Math.min(1,(now-L.fly.t0)/L.fly.d),e=k*k*(3-2*k);
+      if(L.mode==='look'){L.yaw=L.fly.y0+(L.fly.y1-L.fly.y0)*e;L.pitch=L.fly.p0+(L.fly.p1-L.fly.p0)*e;L.tanV=L.fly.v0+(L.fly.v1-L.fly.v0)*e;}
+      else{L.cx=L.fly.cx0+(L.fly.cx1-L.fly.cx0)*e;L.cy=L.fly.cy0+(L.fly.cy1-L.fly.cy0)*e;L.zoom=L.fly.z0+(L.fly.z1-L.fly.z0)*e;}}
+    else if(L.mode==='look'){
+      L.tanV+=(L.tanVt-L.tanV)*Math.min(1,dt*1.6);if(!lookValid(L))clampLook(L);
+      if(!dragging&&Math.abs(vel[0])+Math.abs(vel[1])>.1&&L===T){drag(L,vel[0],vel[1]);vel[0]*=.9;vel[1]*=.9;}
+      const idle=L===T&&!dragging&&now-lastInteract>2600;
+      if(idle&&!reduce){const y0=L.yaw;L.yaw+=L.vx*0.018*dt;if(!lookValid(L)){L.yaw=y0;L.vx*=-1;}const p0=L.pitch;L.pitch+=Math.sin(t*.21)*0.0012;if(!lookValid(L))L.pitch=p0;}
+    } else {
+      L.zoom+=(L.tz-L.zoom)*Math.min(1,dt*2);const idle=L===T&&!dragging&&now-lastInteract>2600;
+      if(idle&&!reduce){const [hw,hh]=clampFlat(L);L.cx+=L.vx*.011*dt;L.cy+=L.vy*.0045*dt;if(hw<.5&&(L.cx<=hw+.001||L.cx>=1-hw-.001))L.vx*=-1;if(hh<.5&&(L.cy<=hh+.001||L.cy>=1-hh-.001))L.vy*=-1;L.tz=1.08+.045*Math.sin(t/9);}
+      clampFlat(L);}
+  }
+  layers=layers.filter(L=>!(L.dying&&L.op<.01));
+  render(t);drawFX(dt,t);updatePins();requestAnimationFrame(frame);}
+function render(t){if(!glOK){draw2D();return;}
+  gl.viewport(0,0,cv.width,cv.height);gl.clearColor(.114,.098,.082,1);gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform2f(U.uRes,cv.width,cv.height);gl.uniform1f(U.uTime,t);gl.uniform1f(U.uDpr,DPR);
+  for(const L of layers){if(L.op<.005)continue;
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,L.tex);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,L.mask||blank);
+    gl.uniform2f(U.uImg,L.iw,L.ih);gl.uniform1f(U.uHasMask,L.mask?1:0);gl.uniform1f(U.uNight,L.night);gl.uniform1f(U.uFx,reduce?0:1);gl.uniform1f(U.uAlpha,Math.min(1,L.op));
+    if(L.mode==='look'){gl.uniform1i(U.uMode,1);gl.uniform4f(U.uCam,L.yaw,L.pitch,L.tanV,0);gl.uniform1f(U.uTanH,L.tanH);}
+    else{const s=flatScale(L)*DPR;gl.uniform1i(U.uMode,0);gl.uniform4f(U.uCam,L.cx,L.cy,s,0);gl.uniform1f(U.uTanH,1);}
+    gl.drawArrays(gl.TRIANGLES,0,3);}}
+let c2=null;function draw2D(){if(!c2)c2=cv.getContext('2d');if(!c2)return;c2.fillStyle='#1d1915';c2.fillRect(0,0,cv.width,cv.height);for(const L of layers){const s=(L.mode==='look'?Math.max(W/L.iw,H/L.ih)*1.05:flatScale(L))*DPR;c2.globalAlpha=Math.min(1,L.op);const cx=L.mode==='look'?.5:L.cx,cy=L.mode==='look'?.5:L.cy;c2.drawImage(L.img,cv.width/2-cx*L.iw*s,cv.height/2-cy*L.ih*s,L.iw*s,L.ih*s);}c2.globalAlpha=1;}
+
+/* ================= NAVEGACIÓN ================= */
+let cur=null;const hist=[];let busy=false;
+const lvIdx=k=>LEVELS.findIndex(l=>l.k===k);
+async function goScene(id,{push=true,from=null,lift=null}={}){
+  if(busy||!SC[id]||id===cur)return;busy=true;const sc=SC[id];const prev=cur;
+  if(push&&prev)hist.push(prev);
+  const a=prev&&SC[prev].lv,b=sc.lv;const useLift=lift!==false&&!!prev&&a!==b&&a!=='ext'&&b!=='ext';
+  const old=top();const texP=sc.img?getTex(sc.img):null;if(texP)texP.catch(()=>{});
+  if(useLift)await liftClose(b);
+  else if(old&&from){if(old.mode==='look'){const tg=lookAt(old,from[0],from[1]);old.fly={t0:performance.now(),d:800,y0:old.yaw,y1:tg[0],p0:old.pitch,p1:tg[1],v0:old.tanV,v1:old.tanV*.55};}
+    else old.fly={t0:performance.now(),d:800,cx0:old.cx,cy0:old.cy,cx1:from[0],cy1:from[1],z0:old.zoom,z1:Math.min(2.4,old.zoom*1.6)};}
+  closeSheet();pinsEl.innerHTML='';pinEls=[];if(sc.html)hideChapter();
+  if(sc.html){if(!useLift)await wait(from?500:200);layers.forEach(L=>L.dying=true);renderHtml(sc.html);$('sceneHtml').classList.add('on');}
+  else{let T;try{T=await texP;}catch(e){toast('No se pudo cargar la imagen. Revise su conexión e intente de nuevo.');busy=false;if(useLift)await liftOpen();return;}
+    if(!useLift&&from)await wait(380);
+    stopHtml();$('sceneHtml').classList.remove('on');layers.forEach(L=>L.dying=true);
+    const L=mkLayer(T,sc);if(useLift)L.op=1;layers.push(L);lastInteract=performance.now()-1500;}
+  cur=id;setupFX(sc);$('place').textContent=sc.t;$('placesub').textContent=sc.sub;rebuildPins();
+  if(useLift){await wait(200);await liftOpen();}
+  (sc.hot||[]).forEach(h=>{if(h.go&&SC[h.go].img)getTex(SC[h.go].img).catch(()=>{});});
+  busy=false;}
+function lookAt(L,u,v){const tanVi=L.tanH*L.ih/L.iw;const x=(u-.5)*2*L.tanH,y=(.5-v)*2*tanVi;return [Math.atan2(x,1),Math.atan2(y,Math.hypot(x,1))];}
+function back(){const p=hist.pop();if(!p){toast('Está en el inicio del recorrido.');return;}goScene(p,{push:false});}
+async function liftClose(toK){const L=$('lift');const from=cur?lvIdx(SC[cur].lv):4;const to=lvIdx(toK);$('liftA').textContent=to<from?'▲':'▼';$('liftL').textContent=LEVELS[to]?LEVELS[to].name:'';L.classList.add('on');await wait(30);L.classList.add('closed');Music.chime();await wait(1250);}
+async function liftOpen(){const L=$('lift');L.classList.remove('closed');await wait(720);L.classList.remove('on');}
+
+/* ================= PUNTOS CLICABLES ================= */
+const pinsEl=$('pins');let pinEls=[];
+function rebuildPins(){pinsEl.innerHTML='';pinEls=[];const sc=SC[cur];if(!sc||!sc.hot)return;
+  sc.hot.forEach((h,i)=>{const b=document.createElement('button');b.className='pin'+(h.info?' info':'')+(h.reel?' reel':'');b.setAttribute('aria-label',h.l+(h.s?'. '+h.s:''));
+    b.innerHTML=`<span class="dot"></span><span class="lbl">${h.l}${h.s?`<small>${h.s}</small>`:''}</span>`;b.style.opacity='0';
+    b.addEventListener('pointerdown',e=>e.stopPropagation());b.addEventListener('click',e=>{e.stopPropagation();act(h);});pinsEl.appendChild(b);pinEls.push([b,h]);setTimeout(()=>{b.style.opacity='1';},900+i*150);});}
+function updatePins(){const L=top();if(!L||!pinEls.length)return;for(const [b,h] of pinEls){const p=project(L,h.x/100,h.y/100);const vis=p&&p[0]>-10&&p[0]<W+10&&p[1]>70&&p[1]<H-30;b.style.display=vis?'':'none';if(vis)b.style.transform=`translate(${p[0]-15}px,${p[1]-15}px)`;}}
+function act(h){if(tour.on)pauseTour();
+  if(h.lift){openSheet('lift');return;}if(h.panel){openSheet(h.panel);return;}if(h.info){openInfo(h.info);return;}if(h.reel){playReel(h.reel);return;}
+  if(h.go)goScene(h.go,{from:[h.x/100,h.y/100]});}
+
+/* ================= MONTAJES (reels) ================= */
+let reelState=null;
+function playReel(k,onEnd){const R=REELS[k];if(!R)return;closeSheet();const el=$('reel');el.classList.add('on');$('rE').textContent=R.e;
+  $('rprog').innerHTML=R.items.map(()=>'<i><b></b></i>').join('');const bars=[...$('rprog').children].map(i=>i.firstChild);
+  let i=0,front=null;const token={};reelState=token;
+  const mk=(src)=>{const isV=/\.mp4$/.test(src);const n=document.createElement(isV?'video':'img');n.className='rimg';if(isV){n.muted=true;n.playsInline=true;n.setAttribute('playsinline','');n.preload='auto';n.src='img/'+src;}else n.src=IMG(src);return n;};
+  const show=()=>{if(reelState!==token)return;if(i>=R.items.length){closeReel();onEnd&&onEnd();return;}const [src,cap]=R.items[i];const isV=/\.mp4$/.test(src);
+    const node=mk(src);el.insertBefore(node,$('rprog'));void node.offsetWidth;node.classList.add('on');if(isV){node.style.objectFit='cover';node.play().catch(()=>{});}
+    const old=front;front=node;if(old){old.classList.remove('on');setTimeout(()=>old.remove(),1200);}
+    $('rbg').style.backgroundImage=isV?'none':`url(${IMG(src)})`;$('rT').textContent=cap;
+    const DUR=isV?5000:4600;bars.forEach((b,j)=>{b.style.transition='none';b.style.transform=`scaleX(${j<i?1:0})`;});const bb=bars[i];void bb.offsetWidth;bb.style.transition=`transform ${DUR}ms linear`;bb.style.transform='scaleX(1)';
+    i++;setTimeout(show,DUR);};
+  show();}
+function closeReel(){reelState=null;const el=$('reel');el.classList.remove('on');el.querySelectorAll('.rimg').forEach(n=>{if(n.id!=='rA'&&n.id!=='rB')n.remove();});}
+$('rX').onclick=()=>{closeReel();if(tour.on)pauseTour();};
+
+/* ================= ESCENAS DE INTERFAZ ================= */
+let htmlLoop=null,valetTimer=null,evPct=64;
+function stopHtml(){if(htmlLoop){cancelAnimationFrame(htmlLoop);htmlLoop=null;}}
+const ICON={
+  spa:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M16 27c-6 0-10-4-10-9 4 0 8 2 10 6 2-4 6-6 10-6 0 5-4 9-10 9zM16 24c-3-4-3-9 0-14 3 5 3 10 0 14z"/></svg>',
+  heat:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M10 26c-2-3 2-5 0-8s2-5 0-8M16 26c-2-3 2-5 0-8s2-5 0-8M22 26c-2-3 2-5 0-8s2-5 0-8"/></svg>',
+  steam:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="11" cy="20" r="5"/><circle cx="19" cy="15" r="6"/><circle cx="22" cy="23" r="4"/></svg>',
+  water:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 14c3 0 3-2 6-2s3 2 6 2 3-2 6-2 3 2 6 2M4 20c3 0 3-2 6-2s3 2 6 2 3-2 6-2 3 2 6 2M10 9a1.5 1.5 0 1 0 0 .1M16 6a1.5 1.5 0 1 0 0 .1M22 9a1.5 1.5 0 1 0 0 .1"/></svg>',
+  cold:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M16 4v24M6 10l20 12M26 10L6 22M13 6l3 3 3-3M13 26l3-3 3 3"/></svg>',
+  beauty:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="16" cy="12" r="7"/><path d="M16 19v9M12 25h8"/></svg>',
+  hands:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 20c4-1 6-5 6-9v-3M26 20c-4-1-6-5-6-9v-3M6 20c2 4 6 6 10 6s8-2 10-6"/></svg>',
+  hair:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="9" cy="23" r="3"/><circle cx="17" cy="23" r="3"/><path d="M11 21L24 6M15 21L8 8"/></svg>',
+};
+function renderHtml(kind){stopHtml();const el=$('sceneHtml');
+  if(kind==='bienestar'){
+    const items=[['Spa','Un circuito de bienestar para desconectar del mundo.',0,'spa'],['Sauna','Calor seco, madera y silencio.',0,'heat'],['Turco','Vapor envolvente que renueva.',0,'steam'],['Hidromasaje','Agua en movimiento para recuperar el cuerpo.',0,'water'],['Cold plunge','Inmersión en frío para revitalizar.',0,'cold'],['Salón de belleza','Cuidado personal sin salir de casa.',0,'beauty'],['Masajes','Bajo solicitud.',1,'hands'],['Peluquería','Bajo solicitud.',1,'hair']];
+    el.innerHTML=`<div class="bgimg" style="background-image:url(${IMG('lobby-panorama')})"></div><div class="steam" style="left:5vw;animation-delay:0s"></div><div class="steam" style="left:40vw;animation-delay:5s"></div><div class="steam" style="left:70vw;animation-delay:9s"></div>
+      <div class="sh-in"><span class="eyebrow">Bienestar & relax</span><h2>Spa y bienestar</h2><p class="lead">Un refugio de calma dentro de Aura Bay: spa, sauna, turco, hidromasaje, cold plunge y salón de belleza. Toque cada experiencia para conocerla.</p>
+      <div class="wcards">${items.map(([n,d,c,ic])=>`<button class="wcard" data-n="${n}">${ICON[ic]}<span class="disp">${n}</span><span class="s">${d}</span><span class="tag${c?' cost':''}">${c?'Costo por uso':'Amenidad'}</span></button>`).join('')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-go="gimnasio">Ir al gimnasio</button><button class="btn" data-go="atardecer">Subir a las terrazas</button><button class="btn" data-lift="1">Ascensor</button></div></div>`;
+    el.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{const n=b.dataset.n;openSheetRaw('Bienestar & relax',n,`<p style="margin:0;font-size:15px;line-height:1.6">${n} forma parte de las experiencias de bienestar de Aura Bay.</p><div class="note">Las imágenes de los espacios de bienestar se incorporarán cuando el estudio de renders las entregue.</div>`,'info');});
+  }
+  if(kind==='undia'){
+    const D=[['07:00','Despertar','El sol entra por el ventanal y el mar ya está ahí.','dormitorio','dormitorio'],['08:00','Entrenar','Gimnasio con luz natural y pilates, en el nivel del lobby.','gimnasio','gimnasio'],['10:00','La playa','Kayak, remo o simplemente la arena, a pasos de casa.','playa','playa'],['13:00','Almuerzo en la terraza','Bar junto a la piscina, frente al Pacífico.','terraza-bar','terrazabar'],['17:30','El atardecer','La piscina se funde con el horizonte.','atardecer','atardecer'],['20:00','Cena y coctelería','Coctelería de autor bajo la gran cubierta curva.','restaurante','restaurante'],['22:00','De vuelta a casa','La torre se ilumina sobre Punta Centinela.','fachada','fachada']];
+    el.innerHTML=`<div class="bgimg" style="background-image:url(${IMG('atardecer')})"></div><div class="sh-in"><span class="eyebrow">Imagine su vida aquí</span><h2>Un día en Aura Bay</h2><p class="lead">Así se vive frente al mar, de la mañana a la noche. Toque cada momento para entrar.</p>
+      <div class="day">${D.map(([h,t,d,img,go])=>`<button class="dcard" data-go="${go}"><img src="${IMG(img)}" alt="" loading="lazy"><span class="dt"><span class="hr">${h}</span><span class="tt">${t}</span><span class="ds">${d}</span></span></button>`).join('')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-sheet="plans">Elegir mi residencia</button><button class="btn" data-film="1">Ver la película</button></div></div>`;
+    el.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>openSheet(b.dataset.sheet));el.querySelectorAll('[data-film]').forEach(b=>b.onclick=()=>playFilm());
+  }
+  if(kind==='beneficios'){
+    const B=[['20%','Mobiliario y complementos','Asesoría personalizada en decoración, paquetes especiales de amoblamiento y plan de pagos preferencial.'],['15%','Audio, video e iluminación','Asesoría en proyectos de audio, video, iluminación y automatización, con plan de pago preferencial.'],['20%','Cortinas y toldos','Descuento exclusivo para clientes de Aura Bay, presente en el departamento modelo y áreas comunes.'],['EV','Movilidad eléctrica','Cargadores para vehículos eléctricos y descuento exclusivo en la compra de su próximo vehículo eléctrico.'],['MAR','Experiencia náutica','Equipos náuticos eléctricos, tablas y kayaks como beneficio exclusivo para la experiencia de playa.'],['+','Descuentos adicionales','Beneficios que se suman a las promociones vigentes.']];
+    el.innerHTML=`<div class="bgimg" style="background-image:url(${IMG('estar')})"></div><div class="sh-in"><span class="eyebrow">Para propietarios</span><h2>Beneficios exclusivos</h2><p class="lead">Beneficios que elevan la experiencia en Aura Bay desde el primer día.</p>
+      <div class="wcards">${B.map(([n,t,d])=>`<div class="wcard" style="cursor:default"><span class="big">${n}</span><span class="disp">${t}</span><span class="s">${d}</span></div>`).join('')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-go="fachada">Volver a la fachada</button><button class="btn" data-go="salacomedor">Ver el departamento modelo</button></div></div>`;
+  }
+  if(kind==='parqueo'){
+    el.innerHTML=`<div class="pk-bg" style="background-image:url(${IMG('torre')})"></div><div class="sh-in"><span class="eyebrow">Servicios · llegada</span><h2>Valet y carga eléctrica</h2><p class="lead">Su llegada a Aura Bay: valet parking en la entrada principal, parqueo de visitantes y cargadores para vehículos eléctricos, todo desde la app de residentes.</p>
+      <div class="pk-grid"><div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div class="glass"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="disp" style="font-size:16px">Valet parking</span><span class="eyebrow" id="vEta">Llega en 3 min</span></div>
+          <div class="tl"><i><b id="t1"></b></i><i><b id="t2"></b></i><i><b id="t3"></b></i></div><div class="tlx"><span>Solicitado</span><span>En camino</span><span>En la entrada</span></div>
+          <button class="btn primary" data-pk="valet" style="align-self:flex-start">Pedir mi auto</button></div>
+        <div class="glass"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="disp" style="font-size:16px">Carga eléctrica</span><span class="eyebrow">Parqueo residentes</span></div>
+          <div class="chg-row">${[['C1','ok','Disponible'],['C2','chg','Cargando'],['C3','ok','Disponible'],['C4','res','Reservado']].map(([n,c,t])=>`<div class="chgc"><span class="ring ${c}"></span><span class="disp">${n}</span><small>${c==='chg'?'<span class="num pkPct">'+evPct+'</span> %':t}</small></div>`).join('')}</div>
+          <button class="btn" data-pk="ev" style="align-self:flex-start">Reservar cargador</button></div>
+        <div class="glass"><span class="disp" style="font-size:16px">Visitantes</span><span style="font-size:14px;color:var(--muted)">Genere un pase digital para su invitado y el equipo de seguridad lo recibirá en la entrada.</span><button class="btn" data-pk="vis" style="align-self:flex-start">Crear pase de visita</button></div>
+      </div>
+      <div class="phone"><div class="scr"><div class="notch"></div><div class="app-h"><b>AURA BAY</b><span class="eyebrow" style="font-size:9px">Residentes</span></div>
+        <div class="app-card"><span class="k">Su vehículo</span><span class="v" id="pV">En camino</span><div class="bar"><span id="pVb" style="width:40%"></span></div></div>
+        <div class="app-card"><span class="k">Carga · C2</span><span class="v"><span class="num" id="pC">${evPct}</span> %</span><div class="bar"><span id="pCb" style="width:${evPct}%"></span></div></div>
+        <div class="app-card"><span class="k">Concierge</span><span style="font-size:13px;color:var(--muted)">Toallas y sombrilla listas en el beach club.</span></div>
+        <button class="app-btn" data-pk="valet">Pedir mi auto</button><button class="app-btn alt" data-pk="vis">Pase de visita</button></div></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-lift="1">Ascensor</button><button class="btn" data-go="torre">Ver la fachada</button></div><p style="margin:0;font-size:11.5px;color:var(--taupe)">Demostración de la experiencia digital.</p></div>`;
+    el.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{if(tour.on)pauseTour();openParking(b.dataset.pk);});
+    let k0=performance.now();const loop=()=>{if(!document.body.contains($('t1'))){htmlLoop=null;return;}const c=((performance.now()-k0)/1000%15)/15;const seg=[Math.min(1,c/.2),Math.min(1,Math.max(0,(c-.2)/.5)),Math.min(1,Math.max(0,(c-.7)/.25))];['t1','t2','t3'].forEach((id,j)=>$(id).style.transform=`scaleX(${seg[j]})`);
+      $('vEta').textContent=c<.7?`Llega en ${Math.max(1,Math.ceil((1-c)*4))} min`:'En la entrada principal';const pv=$('pV');if(pv){pv.textContent=c<.2?'Solicitado':c<.7?'En camino':'Listo en la entrada';$('pVb').style.width=Math.round(c*100)+'%';$('pC').textContent=evPct;$('pCb').style.width=evPct+'%';}document.querySelectorAll('.pkPct').forEach(n=>n.textContent=evPct);htmlLoop=requestAnimationFrame(loop);};htmlLoop=requestAnimationFrame(loop);
+  }
+  el.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{if(tour.on)pauseTour();goScene(b.dataset.go);});
+  el.querySelectorAll('[data-lift]').forEach(b=>b.onclick=()=>openSheet('lift'));el.scrollTop=0;}
+
+/* ----- gemelo digital isométrico ----- */
+function startTwin(){const c=$('twin');if(!c)return;const ctx=c.getContext('2d');let t0=performance.now();
+  const fit=()=>{const r=c.getBoundingClientRect();c.width=Math.max(300,r.width*Math.min(devicePixelRatio,2));c.height=Math.max(200,r.height*Math.min(devicePixelRatio,2));};fit();
+  const COLS=['#ece6dc','#3a3f44','#cdbfa9','#8e9aa1','#d8cfc2','#5b4d40'];
+  const bays=[];for(let i=0;i<8;i++){bays.push({x:i*2.6,y:0,row:0,ev:i<4,car:[1,1,0,1,0,1,0,1][i],col:COLS[i%6],st:['ok','chg','ok','res'][i]||null});bays.push({x:i*2.6,y:8.4,row:1,ev:false,vis:i<4,car:[0,1,0,0,1,0,1,0][i],col:COLS[(i+3)%6]});}
+  const loop=(now)=>{if(!document.body.contains(c)){htmlLoop=null;return;}const t=(now-t0)/1000;const w=c.width,h=c.height,k=Math.min(w/34,h/22);const ox=w*.5,oy=h*.2;
+    const iso=(x,y,z)=>[ox+(x-y)*.866*k-(10.4-6.2)*.866*k*0, oy+(x+y)*.5*k-z*k];
+    const P=(x,y,z)=>{const p=iso(x-10.4,y-6.2,z);return [p[0],p[1]+h*.18];};
+    ctx.clearRect(0,0,w,h);
+    // losa
+    const poly=(pts,fill,stroke,lw)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke();}};
+    poly([P(-1,-1,0),P(22,-1,0),P(22,14,0),P(-1,14,0)],'rgba(22,40,44,.75)','rgba(95,193,204,.35)',1.2*k/20);
+    ctx.strokeStyle='rgba(95,193,204,.07)';ctx.lineWidth=1;for(let x=-1;x<=22;x+=1){const a=P(x,-1,0),b=P(x,14,0);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}for(let y=-1;y<=14;y+=1){const a=P(-1,y,0),b=P(22,y,0);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+    // barrido holográfico
+    const sw=((t*.25)%1)*24-1;poly([P(sw,-1,0),P(sw+1.2,-1,0),P(sw+1.2,14,0),P(sw,14,0)],'rgba(95,193,204,.08)');
+    // puestos
+    for(const b of bays){const x0=b.x,y0=b.y,x1=b.x+2.4,y1=b.y+4.6;poly([P(x0,y0,0),P(x1,y0,0),P(x1,y1,0),P(x0,y1,0)],b.ev?'rgba(95,193,204,.16)':b.vis?'rgba(231,194,144,.08)':null,b.ev?'rgba(95,193,204,.7)':'rgba(220,205,189,.45)',k/22);}
+    // cargadores
+    bays.filter(b=>b.ev).forEach((b,i)=>{const cx=b.x+1.2,cy=-.6;const col=b.st==='chg'?'#8fcfa4':b.st==='res'?'#e7b46a':'#5fc1cc';
+      box3(ctx,P,cx-.25,cy-.2,0,.5,.4,1.6,'#e8e1d6','#c8bfb1','#a99f92');
+      const top=P(cx,cy,1.75);const pulse=b.st==='chg'?.6+.4*Math.sin(t*4):1;ctx.save();ctx.shadowColor=col;ctx.shadowBlur=18*pulse;ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(top[0],top[1],k*.32,k*.16,0,0,7);ctx.fill();ctx.restore();
+      if(b.st==='chg'){for(let j=0;j<6;j++){const f=((t*.8+j/6)%1);const p=P(cx,cy+f*2.2,1.3-f*.6);ctx.fillStyle=`rgba(143,207,164,${1-f})`;ctx.beginPath();ctx.arc(p[0],p[1],k*.09,0,7);ctx.fill();}}
+      const lp=P(cx,cy,3.2);ctx.font=`${Math.round(k*.62)}px Jost, Arial`;ctx.textAlign='center';ctx.fillStyle='rgba(191,238,230,.95)';ctx.fillText(`C${i+1} · ${b.st==='chg'?Math.round(evPct)+'%':b.st==='res'?'Reservado':'Libre'}`,lp[0],lp[1]);});
+    // autos estacionados
+    for(const b of bays){if(!b.car)continue;car3(ctx,P,b.x+.3,b.y+.3,b.col,k);}
+    // valet en ruta (bucle)
+    const cyc=(t%16)/16;let vx,vy;if(cyc<.45){vx=22-cyc/.45*14.5;vy=6.2;}else if(cyc<.6){vx=7.5;vy=6.2+(cyc-.45)/.15*2.6;}else if(cyc<.85){vx=7.5;vy=8.8;}else{vx=7.5+(cyc-.85)/.15*15;vy=6.2;}
+    if(cyc<.85||true){car3(ctx,P,vx-1,vy-1.6,'#e7c290',k,true);const lp=P(vx,vy,2.6);ctx.font=`${Math.round(k*.6)}px Jost, Arial`;ctx.fillStyle='rgba(231,194,144,.95)';ctx.textAlign='center';ctx.fillText('VALET',lp[0],lp[1]);}
+    // rótulos
+    const lab=(x,y,txt,col)=>{const p=P(x,y,0);ctx.font=`${Math.round(k*.58)}px Jost, Arial`;ctx.fillStyle=col;ctx.textAlign='center';ctx.fillText(txt,p[0],p[1]);};
+    lab(5.2,13.6,'VISITANTES','rgba(231,194,144,.85)');lab(16,13.6,'RESIDENTES','rgba(220,205,189,.75)');lab(21,6.2,'INGRESO →','rgba(191,238,230,.8)');
+    const pv=$('pV'),pvb=$('pVb'),pc=$('pC'),pcb=$('pCb');if(pv){const s=cyc<.45?'En camino al lobby':cyc<.85?'Estacionando':'Listo en el lobby';pv.textContent=s;pvb.style.width=Math.round(cyc*100)+'%';pc.textContent=Math.round(evPct);pcb.style.width=evPct+'%';}
+    htmlLoop=requestAnimationFrame(loop);};
+  htmlLoop=requestAnimationFrame(loop);}
+function box3(ctx,P,x,y,z,dx,dy,dz,top,left,right){const f=(pts,c)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=c;ctx.fill();};
+  f([P(x,y+dy,z),P(x+dx,y+dy,z),P(x+dx,y+dy,z+dz),P(x,y+dy,z+dz)],left);f([P(x+dx,y,z),P(x+dx,y+dy,z),P(x+dx,y+dy,z+dz),P(x+dx,y,z+dz)],right);f([P(x,y,z+dz),P(x+dx,y,z+dz),P(x+dx,y+dy,z+dz),P(x,y+dy,z+dz)],top);}
+function shade(hex,f){const n=parseInt(hex.slice(1),16);const r=Math.min(255,(n>>16)*f),g=Math.min(255,((n>>8)&255)*f),b=Math.min(255,(n&255)*f);return `rgb(${r|0},${g|0},${b|0})`;}
+function car3(ctx,P,x,y,col,k,glow){box3(ctx,P,x,y,.15,1.8,4,.55,shade(col,1.05),shade(col,.7),shade(col,.85));box3(ctx,P,x+.15,y+.9,.7,1.5,2.2,.45,'#2a3136','#1b2023','#222a2e');
+  if(glow){ctx.save();ctx.shadowColor='#ffe2a8';ctx.shadowBlur=14;const a=P(x+.3,y,.5),b=P(x+1.5,y,.5);ctx.fillStyle='#fff3d6';ctx.beginPath();ctx.arc(a[0],a[1],k*.1,0,7);ctx.arc(b[0],b[1],k*.1,0,7);ctx.fill();ctx.restore();}}
+
+/* ----- torre holográfica (ascensor) ----- */
+function drawTower(c,curI){if(!c)return;const ctx=c.getContext('2d');const t0=performance.now();
+  const fit=()=>{const r=c.getBoundingClientRect();c.width=r.width*Math.min(devicePixelRatio,2);c.height=r.height*Math.min(devicePixelRatio,2);};fit();
+  const loop=(now)=>{if(!document.body.contains(c))return;const t=(now-t0)/1000;const w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
+    const n=LEVELS.length;const k=Math.min(w/12,h/(n*1.1+3));const ox=w*.5,oy=h*.12;
+    for(let i=0;i<n;i++){const y=oy+i*k*1.05;const sel=i===curI;const rx=k*3.2,ry=k*.9;
+      ctx.save();ctx.translate(ox,y+k*.6);ctx.beginPath();ctx.moveTo(-rx*.4,-ry);ctx.lineTo(rx*.6,-ry);ctx.lineTo(rx*.6,ry);ctx.lineTo(-rx*.4,ry);ctx.ellipse(-rx*.4,0,rx*.6,ry,Math.PI/2,0,Math.PI);ctx.closePath();
+      ctx.fillStyle=sel?'rgba(231,194,144,.28)':'rgba(95,193,204,.06)';ctx.fill();ctx.lineWidth=sel?2:1;ctx.strokeStyle=sel?'#e7c290':`rgba(95,193,204,${.35+.2*Math.sin(t*2+i)})`;if(sel){ctx.shadowColor='#e7c290';ctx.shadowBlur=16;}ctx.stroke();ctx.restore();
+      ctx.font=`${Math.round(k*.42)}px Jost, Arial`;ctx.textAlign='left';ctx.fillStyle=sel?'#f4eee6':'rgba(191,238,230,.7)';ctx.fillText(LEVELS[i].name.toUpperCase(),ox+k*2.6,y+k*.72);}
+    if(sheetKind==='lift')requestAnimationFrame(loop);};requestAnimationFrame(loop);
+  c.onclick=e=>{const r=c.getBoundingClientRect();const n=LEVELS.length;const k=Math.min(r.width/12,r.height/(n*1.1+3));const i=Math.floor((e.clientY-r.top-r.height*.12)/(k*1.05));if(i>=0&&i<n){closeSheet();if(tour.on)pauseTour();goScene(LEVELS[i].sc);}};}
+
+/* ================= PANELES ================= */
+const sheet=$('sheet'),sheetB=$('sheetB');let sheetKind=null;
+function openSheetRaw(ey,t,html,kind){$('sheetEy').textContent=ey;$('sheetT').textContent=t;sheetB.innerHTML=html;sheet.hidden=false;sheetKind=kind;sheetB.scrollTop=0;
+  [['dRooms','rooms'],['dLift','lift'],['dPlans','plans'],['dInfo','data']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(kind===k)));}
+function closeSheet(){sheet.hidden=true;sheetKind=null;['dRooms','dLift','dPlans','dInfo'].forEach(id=>$(id).setAttribute('aria-pressed','false'));if(valetTimer){clearInterval(valetTimer);valetTimer=null;}}
+$('sheetX').onclick=closeSheet;
+function openInfo(k){if(k==='sunset'){openSheetRaw('Punta Centinela','Atardecer de hoy',sunHTML()+'<p style="margin:0;font-size:14px;line-height:1.6;color:var(--muted)">Calculado para la ubicación de Aura Bay. Desde las terrazas, el sol cae sobre el Pacífico.</p>','info');return;}const [t,txt,img]=INFO[k];openSheetRaw('Aura Bay',t,`${img?`<img class="infoimg" src="${IMG(img)}" alt="">`:''}<p style="margin:0;font-size:15px;line-height:1.6">${txt}</p>`,'info');}
+function openSheet(kind){
+  if(kind==='lift'){const c=cur?lvIdx(SC[cur].lv):-1;
+    openSheetRaw('Ascensor','Elija su destino',`<canvas class="tower" id="towerC" aria-label="Torre holográfica"></canvas><div class="lvls">${LEVELS.map((l,i)=>{const s=SC[l.sc];return `<button class="lvl${i===c?' cur':''}" data-i="${i}"><span class="lt">${s.img?`<img src="${IMG(s.img)}" alt="" loading="lazy">`:''}</span><span><b>${l.name}</b><small>${l.sub}${i===c?' · usted está aquí':''}</small></span></button>`;}).join('')}</div><div class="note">Orden de niveles ilustrativo.</div>`,'lift');
+    drawTower($('towerC'),c);sheetB.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{const l=LEVELS[+b.dataset.i];closeSheet();if(tour.on)pauseTour();goScene(l.sc);});return;}
+  if(kind==='rooms'){const G=[['Imagine',['undia']],['Llegada',['fachada','torre','torredia','lobby','lobbypano','maqueta']],['Residencias',['salacomedor','sala2','sala3','sala','estar','comedorcocina','cocina','dormitorio','balcones']],['Social y lifestyle',['restaurante','terrazabar','atardecer','social']],['Deporte y bienestar',['gimnasio','bienestar']],['Experiencia mar',['playa','piscina','beachclub']],['Servicios y beneficios',['parqueo','beneficios']]];
+    openSheetRaw('Menú de ambientes','Ambientes',G.map(([g,ids])=>`<div class="group"><h3>${g}</h3><div class="thumbs">${ids.map(id=>{const s=SC[id];const im=s.img||(id==='bienestar'?'lobby-panorama':id==='parqueo'?'torre':id==='undia'?'atardecer':'sala-3');return `<button class="thumb${cur===id?' cur':''}" data-id="${id}"><img src="${IMG(im)}" alt="" loading="lazy"><span>${s.t}</span></button>`;}).join('')}</div></div>`).join('')+`<div class="group"><h3>Momentos y más</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-story="1">Descubrir Aura Bay</button><button class="btn" data-film="1">Película (1 min)</button><button class="btn" data-r="gastro">Platos y cocteles</button><button class="btn" data-p="data">Datos del proyecto</button><button class="btn" data-p="menu">Carta digital</button><button class="btn" data-p="plans">Planos</button><button class="btn" data-p="servicios">Servicios</button><button class="btn" data-p="conjunto">Plano del conjunto</button><button class="btn" data-p="lobbydesign">Diseño del lobby</button></div></div>`,'rooms');
+    sheetB.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{closeSheet();if(tour.on)pauseTour();goScene(b.dataset.id);});
+    sheetB.querySelectorAll('[data-film]').forEach(b=>b.onclick=()=>{closeSheet();playFilm();});sheetB.querySelectorAll('[data-story]').forEach(b=>b.onclick=()=>{closeSheet();openStory();});sheetB.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openSheet(b.dataset.p));sheetB.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{if(tour.on)pauseTour();playReel(b.dataset.r);});return;}
+  if(kind==='plans'){openResid(0);return;}
+  if(kind==='conjunto'){openSheetRaw('Implantación','Plano del conjunto',`<div class="bigplan"><img src="${IMG('conjunto')}" alt="Plano del conjunto"></div><table class="data"><tbody><tr><td>Área total</td><td class="num">5.233,56 m²</td></tr><tr><td>Frente al mar</td><td class="num">40 m</td></tr><tr><td>Ubicación</td><td>Km 10,5 Ruta del Spondylus, Punta Centinela</td></tr></tbody></table>`,'conjunto');return;}
+  if(kind==='servicios'){const S=[['Concierge',0],['Valet parking',0],['Beach essentials services',0],['App de servicios para residentes',0],['Business center',0],['Parqueo de visitantes',0],['Servicio de limpieza',1],['Masajes',1],['Entrenador personal',0],['Coctelería de autor',1],['Experiencias gastronómicas',1],['Seguridad 24/7',0],['Deportes acuáticos',0],['Servicio de transporte',1],['Servicio de toallas',0],['Club de helicóptero',1],['Peluquería',1]];
+    openSheetRaw('Experiencias Aura Bay','Servicios',`<table class="data"><tbody>${S.map(([n,c])=>`<tr><td>${n}</td><td style="text-align:right">${c?'<span class="tag cost">Costo por uso</span>':''}</td></tr>`).join('')}</tbody></table>`,'servicios');return;}
+  if(kind==='lobbydesign'){openSheetRaw('Presentación conceptual','Diseño del lobby',`<div class="group"><h3>Concepto · Formas de la naturaleza</h3><p style="margin:0;font-size:14px;line-height:1.6;color:var(--muted)">Exclusividad, conexión con la naturaleza, serenidad y texturas. Formas orgánicas, madera, piedra y luz cálida.</p></div>
+    <div class="group"><h3>Materiales</h3><table class="data"><tbody><tr><td>Columnas y piso</td><td>Travertino</td></tr><tr><td>Alfombra</td><td>Diseño circular en tono beige</td></tr><tr><td>Pared del counter</td><td>Panel texturizado con motivo de palmas</td></tr><tr><td>Counter</td><td>Piezas acanaladas color hueso; cubierta ultracompacta tono concha</td></tr><tr><td>Muros</td><td>Pintura especial texturizada</td></tr><tr><td>Cielos falsos</td><td>Luz indirecta y formas orgánicas</td></tr><tr><td>Librero</td><td>Laca al tacto suave, repisas de madera</td></tr></tbody></table></div>
+    <div class="group"><h3>Mobiliario</h3><table class="data"><tbody><tr><td>Seccional curvo</td><td>Tapicería clara, cojines en lino mostaza</td></tr><tr><td>Poltrona tejida</td><td class="num">102 × 96 × 74 cm</td></tr><tr><td>Mesa de centro</td><td class="num">Tronco natural · 155 × 90 cm</td></tr><tr><td>Consola, banca y mesa auxiliar</td><td>Madera taupe</td></tr><tr><td>Plantas tropicales</td><td class="num">1,80 m con maceta</td></tr><tr><td>Lámparas</td><td>Fibras naturales y madera</td></tr></tbody></table></div>
+    <div class="group"><h3>Plano amoblado</h3><div class="bigplan"><img src="${IMG('plano-lobby')}" alt="Plano amoblado del lobby"></div><p style="margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--muted)">Nivel del lobby +8,78 m: recepción, business center, ascensores y gimnasio.</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="toPano">Ver panorámica</button><button class="btn" id="toGym">Ir al gimnasio</button></div>`,'lobbydesign');$('toPano').onclick=()=>{closeSheet();goScene('lobbypano');};$('toGym').onclick=()=>{closeSheet();goScene('gimnasio');};return;}
+  if(kind==='menu'){openMenu('bar');return;}
+  if(kind==='data'){openData();return;}
+}
+$('dRooms').onclick=()=>sheetKind==='rooms'?closeSheet():openSheet('rooms');
+$('dLift').onclick=()=>sheetKind==='lift'?closeSheet():openSheet('lift');
+$('dPlans').onclick=()=>sheetKind==='plans'?closeSheet():openSheet('plans');
+$('dInfo').onclick=()=>sheetKind==='data'?closeSheet():openSheet('data');
+$('dBack').onclick=()=>{if(tour.on)pauseTour();back();};
+$('dReset').onclick=()=>{closeSheet();closeReel();stopTour();hist.length=0;Voice.stop();tour.i=-1;setGuide(-1);playBtn();hideChapter();goScene('fachada',{push:false,lift:false});};
+
+/* ----- elegir residencia ----- */
+function openResid(f){const list=TIPOLOGIAS.filter(t=>!f||t.d===f);
+  openSheetRaw('Residencias','Elija su residencia',`<p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">Departamentos de 1 a 4 dormitorios, todos con vista al mar. Filtre y toque un plano para ampliarlo.</p>
+    <div class="chips2" role="tablist">${[[0,'Todas'],[1,'1 dormitorio'],[2,'2 dormitorios'],[3,'3 dormitorios'],[4,'4 dormitorios']].map(([v,n])=>`<button class="tab" role="tab" aria-selected="${v===f}" data-f="${v}">${n}</button>`).join('')}</div>
+    <div class="plans">${list.map(t=>`<button class="plan" data-t="${t.id}"><span class="pimg"><img src="${IMG(t.img)}" alt="Plano departamento ${t.id}" loading="lazy"></span><span class="pt"><b>Depto. ${t.id}</b><span>${t.d} ${t.d>1?'dormitorios':'dormitorio'}</span><span class="num">${t.m[0]} · ${t.m[1]} m²</span></span></button>`).join('')}</div>
+    <div class="group"><h3>Beneficios al comprar</h3><p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--muted)">Plan de pagos preferencial, asesoría de decoración y hasta 20% en mobiliario, cortinas y toldos.</p></div>
+    <div class="note">Sala de ventas: Punta Centinela, km 10,5 de la Ruta del Spondylus, Santa Elena. Disponibilidad sujeta a confirmación del promotor.</div>`,'plans');
+  sheetB.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>openResid(+b.dataset.f));
+  sheetB.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const t=TIPOLOGIAS.find(x=>x.id===b.dataset.t);const mod=t.d===1?'sala-3':t.d===2?'comedorcocina':t.d===3?'salacomedor':'sala2';
+    openSheetRaw('Plano','Departamento '+t.id,`<div class="bigplan"><img src="${IMG(t.img)}" alt="Plano departamento ${t.id}"></div><table class="data"><tbody><tr><td>Dormitorios</td><td class="num">${t.d}</td></tr><tr><td>Superficies</td><td class="num">${t.m[0]} m² · ${t.m[1]} m²</td></tr></tbody></table><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="bkPlans">Todas las tipologías</button><button class="btn primary" id="toModel">Ver departamento modelo</button><button class="btn" id="toBed">Ver dormitorio</button></div>`,'plans');
+    $('bkPlans').onclick=()=>openResid(f);$('toModel').onclick=()=>{closeSheet();goScene(mod==='comedorcocina'?'comedorcocina':mod);};$('toBed').onclick=()=>{closeSheet();goScene('dormitorio');};});}
+/* ----- carta digital ----- */
+const MENU={
+  bar:{t:'Bar',items:[['Coctelería de autor','Preparaciones de autor para el atardecer frente al Pacífico.',1,'cocteleria'],['Bar de la terraza','Junto a la piscina, frente al mar.',0,'terraza-bar'],['Máquinas de hielo','En las áreas sociales.',0,null]]},
+  gastro:{t:'Gastronomía',items:[['Experiencias gastronómicas','Sabores del Pacífico para residentes e invitados.',1,'gastronomia'],['Restaurante','Mesas al aire libre y barra bajo la gran cubierta curva.',0,'restaurante']]},
+  aire:{t:'Al aire libre',items:[['Zona de fogata','Fuego, mantas y conversación al caer la noche.',0,null],['Horno italiano','Área con horno italiano para reuniones.',0,null],['Áreas BBQ','Parrillas para encuentros en familia.',0,null]]},
+};
+const mySel=[];
+function openMenu(tab){const m=MENU[tab];
+  openSheetRaw('Carta digital · Restaurante y bar','Experiencias gastronómicas',`<button class="menu-hero" id="mReel"><img src="${IMG(tab==='aire'?'atardecer':'restaurante')}" alt=""><span><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Ver platos y cocteles</span></button>
+    <div class="tabs" role="tablist">${Object.entries(MENU).map(([k,v])=>`<button class="tab" role="tab" aria-selected="${k===tab}" data-t="${k}">${v.t}</button>`).join('')}</div>
+    <div>${m.items.map(([n,d,c,img])=>`<div class="menu-item"><span class="ph">${img?`<img src="${IMG(img)}" alt="" loading="lazy">`:''}</span><h4>${n}</h4><p>${d}</p><span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="tag${c?' cost':''}">${c?'Costo por uso':'Para residentes'}</span><button class="btn" data-add="${n}" style="padding:5px 9px;font-size:10.5px">${mySel.includes(n)?'Agregado':'Agregar'}</button></span></div>`).join('')}</div>
+    <div class="mysel"><span class="eyebrow">Mi velada</span>${mySel.length?`<ul>${mySel.map(x=>`<li>${x}</li>`).join('')}</ul><button class="btn primary" id="reqSel">Solicitar (demostración)</button>`:'<span style="font-size:13.5px;color:var(--muted)">Agregue experiencias para armar su velada.</span>'}</div>
+    <div class="note">Carta de muestra: platos y precios se presentarán con la apertura.</div>`,'menu');
+  $('mReel').onclick=()=>{if(tour.on)pauseTour();playReel('gastro');};
+  sheetB.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>openMenu(b.dataset.t));
+  sheetB.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{const n=b.dataset.add;if(!mySel.includes(n))mySel.push(n);openMenu(tab);});
+  const r=$('reqSel');if(r)r.onclick=()=>toast('Demostración: en el edificio, solicitudes como esta se gestionarían con el concierge y la app para residentes.',6000);}
+/* ----- parqueo (paneles de demostración) ----- */
+function openParking(tab){
+  const tabs=`<div class="tabs" role="tablist">${[['ev','Carga eléctrica'],['valet','Valet'],['vis','Visitantes']].map(([k,n])=>`<button class="tab" role="tab" aria-selected="${k===tab}" data-t="${k}">${n}</button>`).join('')}</div>`;let body='';
+  if(tab==='ev')body=`<div style="display:flex;flex-direction:column;gap:10px">${[['C1','ok','Disponible'],['C2','chg','Cargando'],['C3','ok','Disponible'],['C4','res','Reservado']].map(([n,c,s])=>`<div class="charger"><span class="ring ${c}"></span><div style="flex:1;min-width:0"><div class="disp" style="font-size:14px">Cargador ${n}</div><div style="font-size:12.5px;color:var(--sand)">${s}${c==='chg'?` · <span class="num" id="evp">${evPct}</span> %`:''}</div>${c==='chg'?`<div class="bar"><span id="evb" style="width:${evPct}%"></span></div>`:''}</div>${c==='ok'?`<button class="btn" data-res="${n}">Reservar</button>`:''}</div>`).join('')}</div><div class="note">Demostración de la experiencia digital.</div>`;
+  if(tab==='valet')body=`<ol class="steps" id="vsteps"><li>Solicitud recibida</li><li>Vehículo en camino</li><li>Listo en la entrada principal</li></ol><button class="btn primary" id="valetGo">Pedir mi auto (demostración)</button>`;
+  if(tab==='vis')body=`<label class="field" for="visName">Nombre del invitado<input id="visName" placeholder="Ej.: María" autocomplete="off"></label><button class="btn primary" id="visGo">Generar pase (demostración)</button><div id="visOut"></div>`;
+  openSheetRaw('Parqueo digital','Parqueos y carga',tabs+body,'parking');
+  sheetB.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>openParking(b.dataset.t));
+  sheetB.querySelectorAll('[data-res]').forEach(b=>b.onclick=()=>{b.textContent='Reservado';b.disabled=true;toast(`Cargador ${b.dataset.res} reservado (demostración).`);});
+  const vg=$('valetGo');if(vg)vg.onclick=()=>{const li=[...$('vsteps').children];let i=0;li.forEach(l=>l.classList.remove('done'));vg.disabled=true;if(valetTimer)clearInterval(valetTimer);valetTimer=setInterval(()=>{if(i<li.length){li[i].classList.add('done');i++;}else{clearInterval(valetTimer);valetTimer=null;vg.disabled=false;}},1500);};
+  const vs=$('visGo');if(vs)vs.onclick=()=>{const n=($('visName').value||'Invitado').trim().slice(0,40);const c=document.createElement('canvas');c.width=c.height=21;const g=c.getContext('2d');let seed=[...n].reduce((a,ch)=>(a*31+ch.charCodeAt(0))>>>0,7);const r=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);g.fillStyle='#f4eee6';g.fillRect(0,0,21,21);g.fillStyle='#1d1915';for(let y=0;y<21;y++)for(let x=0;x<21;x++){if(r()<.45)g.fillRect(x,y,1,1);}[[0,0],[14,0],[0,14]].forEach(([x,y])=>{g.fillStyle='#1d1915';g.fillRect(x,y,7,7);g.fillStyle='#f4eee6';g.fillRect(x+1,y+1,5,5);g.fillStyle='#1d1915';g.fillRect(x+2,y+2,3,3);});
+    const out=$('visOut');out.innerHTML='';const d=document.createElement('div');d.className='pass';d.appendChild(c);const t=document.createElement('div');t.innerHTML='<div class="disp" style="font-size:14px">Pase de visita</div><div style="font-size:13px;color:var(--sand)"></div><div style="font-size:11px;color:var(--taupe);margin-top:4px">Parqueo de visitantes · demostración</div>';t.children[1].textContent=n;d.appendChild(t);out.appendChild(d);};}
+setInterval(()=>{evPct=evPct>=99?64:evPct+1;const p=$('evp'),b=$('evb');if(p)p.textContent=evPct;if(b)b.style.width=evPct+'%';},2200);
+function openData(){const row=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
+  openSheetRaw('Ficha','Datos del proyecto',`<table class="data"><tbody>
+    ${row('Ubicación','Punta Centinela, km 10,5 de la Ruta del Spondylus, Santa Elena')}${row('Frente al mar','40 metros')}${row('Distancia','Aprox. hora y media de Guayaquil, cerca de Salinas')}${row('Entorno','Urbanización cerrada; playa prácticamente privada')}${row('Área total','5.233,56 m²')}${row('Unidades','105')}${row('Tipologías','1 a 4 dormitorios; de 82,67 a 222,51 m²')}${row('Nivel del lobby','+8,78 m, con recepción, business center, ascensores y gimnasio')}${row('Entrega estimada','2.º trimestre de 2030 (referencial)')}
+  </tbody></table><div class="note">Imágenes ilustrativas que reflejan el espíritu del proyecto; el diseño final se afina durante su desarrollo. Las demostraciones digitales (carta, parqueo, pases) muestran cómo podrían vivirse los servicios.</div>
+  <div class="group"><h3>Cómo navegar</h3><p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--muted)">Arrastre para girar la mirada. Rueda del mouse o dos dedos: acercar. Toque los puntos luminosos para entrar. Flechas: mirar. Tecla N: siguiente parada.</p></div>`,'data');}
+
+/* ================= MÚSICA DE PLAYA ORIGINAL (generada en vivo) ================= */
+const Music={ctx:null,on:true,bus:null,master:null,duckG:null,timer:null,step:0,next:0,bar:0,started:false,
+  init(){if(this.ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=this.ctx=new AC();
+    const comp=c.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=3;comp.connect(c.destination);
+    this.master=c.createGain();this.master.gain.value=0;this.master.connect(comp);
+    this.duckG=c.createGain();this.duckG.gain.value=1;this.duckG.connect(this.master);
+    const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6500;lp.connect(this.duckG);this.bus=lp;
+    const conv=c.createConvolver();const len=c.sampleRate*2.8,ir=c.createBuffer(2,len,c.sampleRate);for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2);}conv.buffer=ir;
+    this.rev=c.createGain();this.rev.gain.value=.32;this.rev.connect(conv);conv.connect(this.duckG);
+    this.dly=c.createDelay(1);this.dly.delayTime.value=60/96*0.75;const fb=c.createGain();fb.gain.value=.22;const dlp=c.createBiquadFilter();dlp.type='lowpass';dlp.frequency.value=2600;this.dly.connect(dlp);dlp.connect(fb);fb.connect(this.dly);dlp.connect(this.bus);
+    const nlen=c.sampleRate*2,nb=c.createBuffer(1,nlen,c.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nlen;i++)nd[i]=Math.random()*2-1;this.noise=nb;
+    // olas
+    const blen=c.sampleRate*8,bb=c.createBuffer(1,blen,c.sampleRate),bd=bb.getChannelData(0);let last=0;for(let i=0;i<blen;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;bd[i]=last*3.2;}
+    const src=c.createBufferSource();src.buffer=bb;src.loop=true;const wl=c.createBiquadFilter();wl.type='lowpass';wl.frequency.value=700;const wg=c.createGain();wg.gain.value=.12;const lfo=c.createOscillator();lfo.frequency.value=.085;const lg=c.createGain();lg.gain.value=.09;lfo.connect(lg);lg.connect(wg.gain);src.connect(wl);wl.connect(wg);wg.connect(this.master);src.start();lfo.start();},
+  start(){this.init();if(!this.ctx)return;this.ctx.resume();if(this.started)return;this.started=true;this.next=this.ctx.currentTime+.15;this.step=0;this.bar=0;
+    this.timer=setInterval(()=>this.sched(),30);this.set(this.on);},
+  set(on){this.on=on;document.body.classList.toggle('music',on);if(!this.ctx)return;const g=this.master.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(on?.7:0,t+(on?2.5:.6));},
+  duck(d){if(!this.ctx)return;const g=this.duckG.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(d?.38:1,t+.6);},
+  mf(m){return 440*Math.pow(2,(m-69)/12);},
+  CH:[{b:41,n:[53,57,60,64]},{b:40,n:[52,55,59,62]},{b:38,n:[50,53,57,60]},{b:36,n:[48,52,55,59]},{b:41,n:[53,57,60,64]},{b:43,n:[55,59,62,65]},{b:45,n:[57,60,64,67]},{b:43,n:[55,57,62,65]}],
+  sched(){const c=this.ctx;const spb=60/96,s16=spb/4;while(this.next<c.currentTime+.15){const st=this.step%16;const swing=(st%2)?s16*.16:0;const t=this.next+swing;const ch=this.CH[this.bar%8];this.play(st,t,ch,s16);this.next+=s16;this.step++;if(this.step%16===0)this.bar++;}},
+  play(st,t,ch,s16){const bar=this.bar;
+    if(st===0||st===8)this.kick(t,st===0?.32:.22);
+    if(st===0)this.bass(t,ch.b,s16*5);if(st===6)this.bass(t,ch.b+7,s16*3);if(st===10)this.bass(t,ch.b+12,s16*3);if(st===14&&bar%2)this.bass(t,ch.b+10,s16*2);
+    if(st===0||st===6||st===10)ch.n.forEach((m,i)=>this.ep(t+i*.008,this.mf(m),st===0?s16*5:s16*3,st===0?.07:.05));
+    const ar=[2,5,7,11,13,15];if(bar>=2&&ar.includes(st)&&Math.random()<.35){const m=ch.n[(Math.random()*4)|0]+12+(Math.random()<.25?12:0);this.marimba(t,this.mf(m),.06);}
+    if(st===0&&bar%4===0)this.pad(t,ch,s16*64);},
+  out(node,rev=.3,dl=0){node.connect(this.bus);if(rev){const g=this.ctx.createGain();g.gain.value=rev;node.connect(g);g.connect(this.rev);}if(dl){const g=this.ctx.createGain();g.gain.value=dl;node.connect(g);g.connect(this.dly);}},
+  env(g,t,a,peak,dec){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+dec);},
+  kick(t,v){const c=this.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(115,t);o.frequency.exponentialRampToValueAtTime(42,t+.14);this.env(g,t,.003,v,.32);o.connect(g);this.out(g,0);o.start(t);o.stop(t+.4);},
+  clap(t){const c=this.ctx;for(let i=0;i<3;i++){const s=c.createBufferSource();s.buffer=this.noise;const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=1600;f.Q.value=.8;const g=c.createGain();this.env(g,t+i*.011,.001,.07,.09);s.connect(f);f.connect(g);this.out(g,.4);s.start(t+i*.011,Math.random());s.stop(t+.2);}},
+  shaker(t,v){const c=this.ctx,s=c.createBufferSource();s.buffer=this.noise;const f=c.createBiquadFilter();f.type='highpass';f.frequency.value=7000;const g=c.createGain();this.env(g,t,.004,v,.05);s.connect(f);f.connect(g);this.out(g,.15);s.start(t,Math.random());s.stop(t+.08);},
+  bass(t,m,d){const c=this.ctx,o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();o.type='triangle';o.frequency.value=this.mf(m);f.type='lowpass';f.frequency.value=420;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.32,t+.01);g.gain.setTargetAtTime(0,t+d*.8,.06);o.connect(f);f.connect(g);this.out(g,0);o.start(t);o.stop(t+d+.4);},
+  ep(t,f,d,v){const c=this.ctx,car=c.createOscillator(),mod=c.createOscillator(),mg=c.createGain(),g=c.createGain();car.frequency.value=f;mod.frequency.value=f;mg.gain.setValueAtTime(f*.7,t);mg.gain.exponentialRampToValueAtTime(f*.05,t+.6);mod.connect(mg);mg.connect(car.frequency);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.006);g.gain.exponentialRampToValueAtTime(v*.3,t+.4);g.gain.setTargetAtTime(0,t+d,.12);car.connect(g);this.out(g,.35,.08);car.start(t);mod.start(t);car.stop(t+d+.8);mod.stop(t+d+.8);},
+  marimba(t,f,v){const c=this.ctx,o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain(),g2=c.createGain();o.frequency.value=f;o2.frequency.value=f*4;this.env(g,t,.003,v,.55);this.env(g2,t,.002,v*.25,.12);o.connect(g);o2.connect(g2);g2.connect(g);this.out(g,.45,.35);o.start(t);o2.start(t);o.stop(t+.8);o2.stop(t+.3);},
+  pad(t,ch,d){const c=this.ctx;ch.n.forEach(m=>{const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();o.type='triangle';o.frequency.value=this.mf(m);o.detune.value=(Math.random()-.5)*8;f.type='lowpass';f.frequency.value=1200;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.02,t+2.5);g.gain.linearRampToValueAtTime(0,t+d);o.connect(f);f.connect(g);this.out(g,.6);o.start(t);o.stop(t+d+.1);});},
+  chime(){if(!this.ctx||!this.on)return;const t=this.ctx.currentTime;[76,81].forEach((m,i)=>this.marimba(t+i*.18,this.mf(m),.09));}
+};
+$('dMusic').onclick=()=>{if(!Music.started)Music.start();Music.set(!Music.on);$('dMusic').setAttribute('aria-pressed',String(Music.on));$('dMusic').classList.toggle('off',!Music.on);$('dMusic').querySelector('span').textContent=Music.on?'Música':'Sin música';};
+
+/* ================= VOZ ================= */
+const Voice={on:true,voice:null,token:0,ok:'speechSynthesis' in window,
+  pick(){if(!this.ok)return;const vs=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang));if(!vs.length)return;
+    const sc=v=>{let s=0;const n=v.name;if(/natural|neural/i.test(n))s+=10;if(/online/i.test(n))s+=6;if(/google/i.test(n))s+=4;if(/premium|enhanced|mejorad/i.test(n))s+=5;if(/paulina|m[oó]nica|dalia|elvira|ximena|sabina|marisol|paloma|camila|valentina|andrea|helena|lupe|elena|laura|salom|francisca|catalina|larissa/i.test(n))s+=3;if(/es[-_](EC|MX|US|419|CO|PE)/i.test(v.lang))s+=2;if(/compact|espeak/i.test(n))s-=8;return s;};
+    vs.sort((a,b)=>sc(b)-sc(a));this.voice=vs[0];},
+  speakable(t){return t.replace(/Aura Bay/g,'Áura Béi').replace(/rooftop/gi,'rúftop').replace(/beach club/gi,'bich clob').replace(/BBQ/g,'barbacoa').replace(/concierge/gi,'consiérsh').replace(/cold plunge/gi,'inmersión en frío').replace(/valet/gi,'valé').replace(/business center/gi,'bísnes cénter').replace(/\bspa\b/gi,'espá').replace(/jacuzzis/gi,'yacusis').replace(/paddleboard/gi,'pádelbord').replace(/24\/7/g,'veinticuatro horas');},
+  say(text,onend){this.stop();const tk=this.token;const done=()=>{if(tk!==this.token)return;document.body.classList.remove('speaking');Music.duck(false);onend&&onend();};
+    if(!this.on||!this.ok){setTimeout(done,Math.max(6000,text.length*60));return;}
+    if(!this.voice)this.pick();
+    const parts=[];this.speakable(text).split(/(?<=[.!?;:])\s+/).forEach(p=>{if(parts.length&&parts[parts.length-1].length+p.length<170)parts[parts.length-1]+=' '+p;else parts.push(p);});
+    let i=0;document.body.classList.add('speaking');Music.duck(true);
+    const next=()=>{if(tk!==this.token)return;if(i>=parts.length){setTimeout(done,600);return;}const txt=parts[i++];const u=new SpeechSynthesisUtterance(txt);if(this.voice){u.voice=this.voice;u.lang=this.voice.lang;}else u.lang='es-MX';u.rate=.93;u.pitch=1.02;let fired=false;const fin=()=>{if(fired)return;fired=true;clearTimeout(sf);setTimeout(next,220);};u.onend=fin;u.onerror=fin;const sf=setTimeout(fin,txt.length*95+5000);speechSynthesis.speak(u);};
+    setTimeout(next,120);},
+  stop(){this.token++;document.body.classList.remove('speaking');Music.duck(false);if(this.ok)speechSynthesis.cancel();}
+};
+if(Voice.ok){Voice.pick();speechSynthesis.onvoiceschanged=()=>Voice.pick();}
+function setVoice(on){Voice.on=on;$('dVoice').setAttribute('aria-pressed',String(on));$('dVoice').classList.toggle('off',!on);$('dVoice').querySelector('span').textContent=on?'Voz':'Sin voz';
+  if(!on){const w=tour.on;Voice.stop();if(w)scheduleAdvance();}else if(tour.on)speakStep();}
+$('dVoice').onclick=()=>setVoice(!Voice.on);
+
+/* ================= CAPÍTULOS ================= */
+let chT=null;function showChapter(e,t,s){if(cur&&SC[cur].html)return;const c=$('chapter');c.classList.remove('on');clearTimeout(chT);setTimeout(()=>{$('chE').textContent=e||'';$('chT').textContent=t;$('chS').textContent=s||'';c.classList.add('on');chT=setTimeout(()=>c.classList.remove('on'),9000);},350);}
+function hideChapter(){clearTimeout(chT);$('chapter').classList.remove('on');}
+
+/* ================= RECORRIDO GUIADO (textos del brochure) ================= */
+const TOUR=[
+  {sc:'fachada',ce:'Aura Bay · Luxury Residences',ct:'La costa Pacífico tiene un nuevo ícono',cs:'Punta Centinela, Santa Elena.',t:'Bienvenido',x:'Bienvenido a Aura Bay Luxury Residences. Soy su anfitriona y le acompañaré en este recorrido. Las imágenes son ilustrativas y reflejan el espíritu del proyecto. La costa del Pacífico tiene un nuevo ícono.'},
+  {sc:'torre',ce:'Capítulo uno',ct:'Una visión diferente',cs:'Arquitectura contemporánea, servicios premium de estándar internacional y espacios meticulosamente diseñados.',t:'Una visión diferente',x:'Aura Bay es una propuesta residencial de alto nivel en Punta Centinela, la zona de mayor crecimiento inmobiliario de la provincia. Un destino para quienes valoran la privacidad, la sofisticación y una conexión auténtica con la playa. Nace para redefinir el lujo frente al océano, donde la estética, la funcionalidad y el confort conviven en perfecta armonía.'},
+  {sc:'playa',ce:'Capítulo dos',ct:'Ubicación privilegiada',cs:'Km 10,5 de la Ruta del Spondylus · 40 metros de frente al mar.',t:'Ubicación privilegiada',x:'Estamos en el kilómetro diez y medio de la Ruta del Spondylus, con cuarenta metros de frente al mar, en una de las playas más privilegiadas de la zona. A hora y media de Guayaquil, cerca de Salinas, pero lejos del ruido. Integrado en una urbanización cerrada, con el privilegio de una playa prácticamente privada. En la arena le esperan kayak, paddleboard, tabla eléctrica de hidroala y deportes acuáticos.'},
+  {sc:'beachclub',ce:'Capítulo tres',ct:'Beach club',cs:'Piscina, sombrillas y servicio frente a la arena.',t:'Beach club',x:'Bienvenido al beach club: piscina, camastros, sombrillas y servicio de toallas a pasos de la arena. Como beneficio exclusivo, los propietarios cuentan con equipos náuticos eléctricos, tablas y kayaks para cada día de playa.'},
+  {sc:'terrazabar',ce:'Capítulo cuatro',ct:'Experiencia',cs:'Amenidades para volver siempre, no solo en feriados.',t:'Terraza con bar y piscina',x:'Sus amenidades no fueron pensadas solo para feriados o temporadas, sino para despertar el deseo de volver siempre, con un nivel de confort que supera incluso al de muchas primeras residencias. Toque el bar para abrir la carta digital.'},
+  {sc:'lobby',ce:'Capítulo cinco',ct:'Diseño',cs:'Concepto «Formas de la naturaleza»: travertino, luz indirecta y formas orgánicas.',t:'Lobby y recepción',x:'El diseño interior está a cargo de un estudio de prestigio internacional, con más de treinta años de trayectoria, reconocido por su elegancia atemporal y su calidez. En el lobby, el concepto formas de la naturaleza une travertino, luz indirecta, madera y formas orgánicas. Aquí le recibe el concierge, con seguridad las veinticuatro horas, business center y una aplicación de servicios para residentes.'},
+  {sc:'lobbypano',ce:'Llegada',ct:'Lobby panorámico',cs:'Gire la mirada para recorrerlo.',t:'Lobby panorámico',x:'Gire la mirada y recorra el lobby completo: el counter curvo de recepción, el lounge de mobiliario curvo y el arte orgánico que da la bienvenida.'},
+  {sc:'salacomedor',ce:'Capítulo seis',ct:'Arquitectura frente al mar',cs:'Departamentos de uno a cuatro dormitorios, de 82 a 222 m².',t:'Departamento modelo',x:'Subimos a las residencias. Aura Bay ofrece departamentos de uno a cuatro dormitorios, desde ochenta y dos hasta doscientos veintidós metros cuadrados. La sala y el comedor se abren directamente al Pacífico.'},
+  {sc:'comedorcocina',ce:'Residencias',ct:'Cocina y comedor',cs:'Para compartir sin perder la vista.',t:'Cocina y comedor',x:'La cocina con isla se integra al comedor, pensada para compartir sin perder la vista al mar.'},
+  {sc:'dormitorio',ce:'Residencias',ct:'Dormitorios',cs:'Despertar frente al Pacífico.',t:'Dormitorio',x:'Los dormitorios se abren al mar con ventanales de piso a techo. Despertar frente al Pacífico, cada mañana.'},
+  {sc:'balcones',ce:'Residencias',ct:'Balcones sobre el océano',cs:'Cada nivel mira al mar.',t:'Balcones sobre el océano',x:'Y aquí está la razón de todo: el Pacífico frente a usted, cada día. En el botón Planos puede ver la distribución y los dormitorios de cada tipología.'},
+  {sc:'atardecer',ce:'Capítulo siete',ct:'Social & lifestyle',cs:'Rooftop panorámico, rooftop pool, jacuzzis, fogata, BBQ y horno italiano.',t:'Terraza al atardecer',x:'Cuando cae el sol, el agua se funde con el horizonte. Rooftop panorámico, rooftop pool, jacuzzis, piscina de niños, amplias áreas sociales, zona de fogata, áreas BBQ, horno italiano, área de juegos y restaurante.'},
+  {sc:'gimnasio',ce:'Capítulo ocho',ct:'Deporte & salud',cs:'Gimnasio equipado, área de pilates y cold plunge.',t:'Gimnasio equipado',x:'Deporte y salud, en el mismo nivel del lobby: gimnasio equipado con luz natural, área de pilates, cold plunge y entrenador personal.'},
+  {sc:'bienestar',ce:'Capítulo nueve',ct:'Bienestar & relax',cs:'Spa, sauna, turco, hidromasaje y salón de belleza.',t:'Spa y bienestar',x:'Bienestar y relax: spa, sauna, turco, hidromasaje y salón de belleza, con masajes bajo solicitud. Un refugio de calma para usted.'},
+  {sc:'restaurante',reel:'gastro',panel:'menu',ce:'Capítulo diez',ct:'Experiencias gastronómicas',cs:'Coctelería de autor y sabores del Pacífico.',t:'Áreas sociales',x:'El restaurante, al aire libre bajo una gran cubierta curva, invita a compartir. Coctelería de autor y experiencias gastronómicas para residentes e invitados. Le muestro algunos momentos, y luego la carta digital.'},
+  {sc:'parqueo',ce:'Capítulo once',ct:'Servicios',cs:'Concierge, valet parking, carga eléctrica y app para residentes.',t:'Valet y carga eléctrica',x:'Los servicios de Aura Bay incluyen concierge, valet parking, parqueo de visitantes, seguridad veinticuatro horas, servicio de toallas, entrenador personal, y cargadores para vehículos eléctricos. Todo, desde la app para residentes.'},
+  {sc:'beneficios',ce:'Capítulo doce',ct:'Beneficios exclusivos',cs:'Hasta 20% en mobiliario, cortinas y toldos; 15% en audio, video e iluminación.',t:'Beneficios exclusivos',x:'Como propietario, usted accede a beneficios exclusivos: asesoría personalizada en decoración y veinte por ciento de descuento en mobiliario y complementos; quince por ciento en audio, video, iluminación y automatización; veinte por ciento en cortinas y toldos; y un descuento exclusivo en su próximo vehículo eléctrico.'},
+  {sc:'undia',ce:'Capítulo trece',ct:'Un día en Aura Bay',cs:'',t:'Un día en Aura Bay',x:'Imagine su día. Despertar con el mar en la ventana, entrenar con luz natural, bajar a la playa, almorzar junto a la piscina, ver caer el sol y cerrar la noche con una cena bajo las estrellas. Esto es vivir en Aura Bay.'},
+  {sc:'fachada',ce:'Aura Bay',ct:'Más que una propiedad',cs:'Un escenario de experiencias frente al mar.',t:'Esto es Aura Bay',x:'Aura Bay trasciende el concepto de propiedad. Es un escenario de experiencias, un refugio de momentos memorables y una forma de vivir donde el lujo se manifiesta en la calma, la exclusividad y la armonía con el entorno. Gracias por acompañarme. Siga explorando cada ambiente cuando quiera.'},
+];
+const tour={on:false,i:-1,timer:null,need:0};
+function setGuide(i){if(i<0){$('gStep').textContent='Su anfitriona en Aura Bay';$('gTitle').textContent='Bienvenido';$('gText').textContent='Arrastre para mirar a su alrededor. Toque los puntos luminosos para entrar a cada espacio.';$('gProg').style.width='0%';return;}
+  const s=TOUR[i];$('gStep').textContent=`Parada ${i+1} de ${TOUR.length}`;$('gTitle').textContent=s.t;$('gText').textContent=s.x;$('gProg').style.width=((i+1)/TOUR.length*100)+'%';}
+function playBtn(){$('gPlay').innerHTML=tour.on?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg><span>Pausar</span>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>'+(tour.i>=0?'Continuar':'Recorrido guiado')+'</span>';document.body.classList.toggle('cine',tour.on);}
+async function runStep(i){clearTimeout(tour.timer);if(i<0||i>=TOUR.length){stopTour();return;}tour.i=i;const s=TOUR[i];setGuide(i);closeSheet();closeReel();
+  if(cur!==s.sc){while(busy)await wait(100);await goScene(s.sc);}
+  if(tour.i!==i)return;showChapter(s.ce,s.ct,s.cs);
+  tour.need=1+(s.reel?1:0);const doneOne=()=>{if(tour.i!==i)return;tour.need--;if(tour.need<=0){if(s.panel&&tour.on){openSheet(s.panel);scheduleAdvance(5200);}else scheduleAdvance(1600);}};
+  if(s.reel)setTimeout(()=>{if(tour.i===i&&tour.on)playReel(s.reel,doneOne);else doneOne();},3500);
+  Voice.say(s.x,()=>{if(tour.on&&tour.i===i)doneOne();});}
+function speakStep(){const i=tour.i;if(i<0)return;Voice.say(TOUR[i].x,()=>{if(tour.on&&tour.i===i)scheduleAdvance(1600);});}
+function scheduleAdvance(ms){clearTimeout(tour.timer);const i=tour.i;if(!Voice.on)ms=Math.max(ms||0,6500);tour.timer=setTimeout(()=>{if(tour.on&&tour.i===i)runStep(i+1);},ms);}
+function startTour(from){tour.on=true;playBtn();runStep(from);}
+function pauseTour(){if(!tour.on)return;tour.on=false;clearTimeout(tour.timer);Voice.stop();playBtn();}
+function stopTour(){tour.on=false;clearTimeout(tour.timer);playBtn();}
+$('gPlay').onclick=()=>{if(tour.on)pauseTour();else{if(tour.i>=TOUR.length-1)tour.i=-1;startTour(Math.max(0,tour.i));}};
+$('gNext').onclick=()=>{const n=tour.i+1;if(n>=TOUR.length)return;tour.on=true;playBtn();runStep(n);};
+$('gPrev').onclick=()=>{tour.on=true;playBtn();runStep(Math.max(0,tour.i-1));};
+$('gRepeat').onclick=()=>{if(tour.i>=0)Voice.say(TOUR[tour.i].x,()=>{if(tour.on)scheduleAdvance(1600);});else Voice.say($('gText').textContent);};
+$('gMin').onclick=()=>{const g=$('guide');g.classList.toggle('min');$('gMin').style.transform=g.classList.contains('min')?'rotate(180deg)':'';};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='Escape'){closeSheet();closeReel();return;}const L=top();
+  if(L&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){const d=40;drag(L,e.key==='ArrowLeft'?d:e.key==='ArrowRight'?-d:0,e.key==='ArrowUp'?d:e.key==='ArrowDown'?-d:0);lastInteract=performance.now();}
+  if(e.key==='n'||e.key==='N')$('gNext').click();});
+let toastT;function toast(m,ms=3800){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),ms);}
+
+
+/* ================= REGISTRO PREVIO ================= */
+const REG_ENDPOINT='https://script.google.com/macros/s/AKfycbwi_SyhVmHXgWwDUxRBtvLQz6vzDYwmafU7SWaRwiIBij3Lbirl62WsTbU3TJpzcD5r1Q/exec';  // URL del servicio de registro (Google Apps Script)
+let docType='cedula';
+function cedulaOK(c){if(!/^\d{10}$/.test(c))return false;const pr=+c.slice(0,2);if(!((pr>=1&&pr<=24)||pr===30))return false;if(+c[2]>5)return false;let sum=0;for(let i=0;i<9;i++){let v=+c[i]*(i%2?1:2);if(v>9)v-=9;sum+=v;}return ((10-sum%10)%10)===+c[9];}
+function telOK(t){const d=t.replace(/[\s\-()]/g,'');return /^09\d{8}$/.test(d)||/^\+?\d{9,15}$/.test(d);}
+(function(){let reg=null;try{reg=localStorage.getItem('aura-reg');}catch(e){}
+  if(reg){$('gate').remove();return;}
+  const setType=t=>{docType=t;$('tCed').setAttribute('aria-selected',String(t==='cedula'));$('tPas').setAttribute('aria-selected',String(t!=='cedula'));$('gId').inputMode=t==='cedula'?'numeric':'text';$('gId').placeholder=t==='cedula'?'10 dígitos':'Número de pasaporte';$('eId').textContent='';};
+  $('tCed').onclick=()=>setType('cedula');$('tPas').onclick=()=>setType('pasaporte');
+  $('gForm').addEventListener('submit',e=>{e.preventDefault();let ok=true;
+    const name=$('gName').value.trim().replace(/\s+/g,' '),id=$('gId').value.trim(),tel=$('gTel').value.trim();
+    $('eName').textContent=name.split(' ').length>=2&&name.length>=5?'':(ok=false,'Escriba sus nombres y apellidos.');
+    $('eId').textContent=docType==='cedula'?(cedulaOK(id)?'':(ok=false,'La cédula no es válida. Revise los 10 dígitos.')):(/^[A-Za-z0-9]{5,20}$/.test(id)?'':(ok=false,'Revise el número de pasaporte.'));
+    $('eTel').textContent=telOK(tel)?'':(ok=false,'Escriba un celular válido, por ejemplo 0991234567.');
+    $('eOk').textContent=$('gOk').checked?'':(ok=false,'Para continuar, acepte el tratamiento de datos.');
+    if(!ok)return;
+    if(REG_ENDPOINT){const body=new URLSearchParams({nombre:name,documento:id,tipo:docType,telefono:tel,consentimiento:'si'});try{fetch(REG_ENDPOINT,{method:'POST',mode:'no-cors',body});}catch(err){}}
+    try{localStorage.setItem('aura-reg',JSON.stringify({n:name.split(' ')[0],t:Date.now()}));}catch(err){}
+    const g=$('gate');g.style.transition='opacity .8s';g.style.opacity='0';setTimeout(()=>g.remove(),820);});
+})();
+
+/* ================= INICIO ================= */
+resize();playBtn();requestAnimationFrame(frame);
+if(matchMedia('(max-width:720px)').matches){$('guide').classList.add('min');$('gMin').style.transform='rotate(180deg)';}
+['torre','playa','beachclub','piscina','lobby'].forEach(n=>getTex(n).catch(()=>{}));
+goScene('fachada',{push:false});
+function begin(sound){const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);
+  Music.on=sound;Music.start();$('dMusic').setAttribute('aria-pressed',String(sound));$('dMusic').classList.toggle('off',!sound);$('dMusic').querySelector('span').textContent=sound?'Música':'Sin música';
+  setVoice(sound);if(sound&&Voice.ok){try{speechSynthesis.speak(new SpeechSynthesisUtterance(' '));}catch(e){}}
+  startTour(0);}
+$('startOn').onclick=()=>begin(true);
+$('startOff').onclick=()=>begin(false);
+
+/* ================= ATARDECER DE HOY (cálculo solar, Punta Centinela) ================= */
+function sunsetToday(){const lat=-2.205,lon=-80.94,d=new Date();const n=Math.floor((Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(d.getUTCFullYear(),0,0))/864e5);
+  const g=2*Math.PI/365*(n-1);const eq=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+  const dec=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
+  const r=Math.PI/180;const ha=Math.acos(Math.cos(90.833*r)/(Math.cos(lat*r)*Math.cos(dec))-Math.tan(lat*r)*Math.tan(dec))/r;
+  const utc=720-4*(lon-ha)-eq;const loc=utc-300;const hh=Math.floor(loc/60),mm=Math.round(loc%60);
+  const now=new Date(d.getTime()+(d.getTimezoneOffset()-300)*60000);const nowMin=now.getHours()*60+now.getMinutes();let left=loc-nowMin;
+  return {txt:`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`,left};}
+function sunHTML(){const s=sunsetToday();const l=s.left>0?`Faltan ${Math.floor(s.left/60)} h ${Math.round(s.left%60)} min`:'Mañana, otra vez';return `<div class="sun"><b>${s.txt}</b><span>Hoy el sol se oculta en Punta Centinela<br>${l}</span></div>`;}
+
+/* ================= DESCUBRIR AURA BAY ================= */
+let storyBuilt=false;
+function buildStory(){const el=$('story');const D=[['07:00','Despertar','El sol entra por el ventanal y el mar ya está ahí.','dormitorio','dormitorio'],['08:00','Entrenar','Gimnasio con luz natural, en el nivel del lobby.','gimnasio','gimnasio'],['10:00','La playa','Kayak, remo o simplemente la arena.','playa','playa'],['13:00','Terraza','Bar junto a la piscina, frente al Pacífico.','terraza-bar','terrazabar'],['17:30','Atardecer','La piscina se funde con el horizonte.','atardecer','atardecer'],['20:00','Cena','Coctelería de autor bajo la cubierta curva.','restaurante','restaurante'],['22:00','Hogar','La torre se ilumina sobre Punta Centinela.','fachada','fachada']];
+  el.innerHTML=`<div class="st-x"><button class="btn" data-tour="1" style="background:rgba(16,13,10,.6)">Recorrido inmersivo</button><button class="btn iconbtn" id="stX" aria-label="Cerrar" style="background:rgba(16,13,10,.6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <section class="st-sec st-hero"><video src="img/intro-loop.mp4" autoplay muted loop playsinline poster="img/atardecer.jpg" data-px=".25"></video><div class="st-in"><div class="st-kicker">Aura Bay · Luxury Residences</div><h1 class="st-h1">La costa Pacífico tiene un nuevo ícono</h1><p class="st-p">Punta Centinela, Santa Elena. Un lugar reservado para quienes valoran la privacidad, la sofisticación y una conexión auténtica con la playa.</p><div class="st-cue"><i></i>Deslice para descubrir</div></div></section>
+  <div class="st-in"><div class="st-split"><div class="st-media reveal"><img src="${IMG('torre-dia')}" alt="" data-px=".12"></div><div class="reveal"><div class="st-kicker">Una visión diferente</div><h2 class="st-h2">Redefinir el lujo frente al océano</h2><p class="st-p">Arquitectura contemporánea, servicios premium de estándar internacional y espacios meticulosamente diseñados, donde la estética, la funcionalidad y el confort conviven en perfecta armonía.</p></div></div></div>
+  <div class="st-num"><div><b data-count="40">0</b><span>Metros frente al mar</span></div><div><b data-count="10.5" data-dec="1">0</b><span>Km Ruta del Spondylus</span></div><div><b>1 – 4</b><span>Dormitorios</span></div><div><b data-count="105">0</b><span>Residencias</span></div><div><b data-count="5233">0</b><span>m² de terreno</span></div></div>
+  <section class="st-sec st-full"><img class="st-bgimg" src="${IMG('playa')}" alt="" data-px=".2"><div class="st-in"><div class="st-kicker reveal">Ubicación privilegiada</div><h2 class="st-h2 reveal">Una playa prácticamente privada</h2><p class="st-p reveal">A hora y media de Guayaquil, cerca de Salinas pero lejos del ruido. Integrado en una urbanización cerrada, con cuarenta metros de frente al mar en una de las playas más privilegiadas de la zona.</p></div></section>
+  <div class="st-in"><div class="st-amen">
+    <div class="am reveal"><img src="${IMG('lobby-panorama')}" alt=""><div class="amt"><h3>Bienestar & relax</h3><ul><li>Spa</li><li>Sauna y turco</li><li>Hidromasaje</li><li>Salón de belleza</li></ul></div></div>
+    <div class="am reveal"><img src="${IMG('atardecer')}" alt=""><div class="amt"><h3>Social & lifestyle</h3><ul><li>Rooftop panorámico y pool</li><li>Jacuzzis</li><li>Fogata, BBQ y horno italiano</li><li>Restaurante</li></ul></div></div>
+    <div class="am reveal"><img src="${IMG('gimnasio')}" alt=""><div class="amt"><h3>Deporte & salud</h3><ul><li>Gimnasio equipado</li><li>Área de pilates</li><li>Cold plunge</li><li>Entrenador personal</li></ul></div></div>
+    <div class="am reveal"><img src="${IMG('beachclub')}" alt=""><div class="amt"><h3>Experiencia mar</h3><ul><li>Beach club</li><li>Kayak y paddleboard</li><li>Deportes acuáticos</li><li>Mobiliario de playa</li></ul></div></div>
+  </div></div>
+  <section class="st-sec st-full"><img class="st-bgimg" src="${IMG('atardecer')}" alt="" data-px=".2"><div class="st-in"><div class="st-kicker reveal">Cada tarde</div><h2 class="st-h2 reveal">El atardecer es parte de la casa</h2>${sunHTML()}</div></section>
+  <div class="st-in" style="padding-top:clamp(70px,10vw,120px)"><div class="st-kicker reveal">Imagine su vida aquí</div><h2 class="st-h2 reveal">Un día en Aura Bay</h2></div>
+  <div class="st-day">${D.map(([h,t,d,img,go])=>`<button class="dcard" data-go="${go}"><img src="${IMG(img)}" alt="" loading="lazy"><span class="dt"><span class="hr">${h}</span><span class="tt">${t}</span><span class="ds">${d}</span></span></button>`).join('')}</div>
+  <div class="st-in"><div class="st-split rev"><div class="st-media reveal"><img src="${IMG('dormitorio')}" alt="" data-px=".12"></div><div class="reveal"><div class="st-kicker">Arquitectura frente al mar</div><h2 class="st-h2">Residencias que miran al Pacífico</h2><p class="st-p">De uno a cuatro dormitorios, de 82 a 222 m², con ventanales de piso a techo y balcones curvos abiertos al océano.</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:22px"><button class="btn primary" data-sheet="plans">Elegir mi residencia</button><button class="btn" data-go="salacomedor">Entrar al departamento</button></div></div></div></div>
+  <div class="st-in"><div class="st-split"><div class="st-media reveal"><img src="${IMG('lobby')}" alt="" data-px=".12"></div><div class="reveal"><div class="st-kicker">Diseño</div><h2 class="st-h2">Formas de la naturaleza</h2><p class="st-p">Un estudio de diseño interior de prestigio internacional, con más de treinta años de trayectoria, firma los interiores: travertino, luz indirecta, madera y formas orgánicas.</p></div></div></div>
+  <div class="st-in"><div class="st-film reveal" id="stFilm"><img src="${IMG('fachada')}" alt="" style="object-position:50% 30%"><div class="pl"><span><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span></div></div><p class="st-p" style="text-align:center;margin-inline:auto">La película de Aura Bay · 1 minuto</p></div>
+  <div class="st-in"><div class="st-cta"><div class="st-kicker">Aura Bay</div><h2 class="st-h2">Más que una propiedad, una forma de vivir</h2><p class="st-p" style="text-align:center">Entre ahora y recorra cada espacio con su anfitriona.</p><button class="enter" data-tour="1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Iniciar el recorrido inmersivo</button><span style="font-size:11.5px;color:var(--taupe)">Imágenes ilustrativas del proyecto.</span></div></div>`;
+  el.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{closeStory();goScene(b.dataset.go);});
+  el.querySelectorAll('[data-tour]').forEach(b=>b.onclick=()=>{closeStory();setVoice(true);if(!tour.on)startTour(0);});
+  el.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>{closeStory();openSheet(b.dataset.sheet);});
+  $('stFilm').onclick=()=>playFilm();$('stX').onclick=closeStory;
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');e.target.querySelectorAll('[data-count]').forEach(countUp);if(e.target.matches('[data-count]'))countUp(e.target);}}),{root:el,threshold:.2});
+  el.querySelectorAll('.reveal,.st-num div').forEach(n=>io.observe(n));
+  const px=[...el.querySelectorAll('[data-px]')];el.addEventListener('scroll',()=>{const h=el.clientHeight;px.forEach(n=>{const r=n.parentElement.getBoundingClientRect();const c=(r.top+r.height/2-h/2)/h;n.style.transform=`translateY(${(-c*parseFloat(n.dataset.px)*100).toFixed(2)}%)`;});},{passive:true});
+  storyBuilt=true;}
+function countUp(n){if(n.dataset.done)return;n.dataset.done=1;const to=parseFloat(n.dataset.count),dec=+n.dataset.dec||0;const t0=performance.now();const f=now=>{const k=Math.min(1,(now-t0)/1600),e=1-Math.pow(1-k,3);const v=to*e;n.textContent=dec?v.toFixed(dec).replace('.',','):Math.round(v).toLocaleString('es-EC');if(k<1)requestAnimationFrame(f);};requestAnimationFrame(f);}
+function openStory(){if(!storyBuilt)buildStory();if(tour.on)pauseTour();Voice.stop();closeSheet();const el=$('story');el.classList.add('on');el.scrollTop=0;const v=el.querySelector('video');if(v)v.play().catch(()=>{});}
+function closeStory(){const el=$('story');el.classList.remove('on');const v=el.querySelector('video');if(v)v.pause();}
+$('startStory').onclick=()=>{const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);
+  Music.on=true;Music.start();Music.set(true);setVoice(true);openStory();};
+
+let filmPrev=null;
+function playFilm(){if(tour.on)pauseTour();Voice.stop();closeSheet();closeReel();const f=$('film'),v=$('filmV');if(!v.src)v.src='img/aura-bay-film.mp4';f.classList.add('on');filmPrev=Music.on;if(Music.on&&Music.started)Music.set(false);v.currentTime=0;v.play().catch(()=>{});}
+function closeFilm(){const f=$('film'),v=$('filmV');v.pause();f.classList.remove('on');if(filmPrev&&Music.started)Music.set(true);filmPrev=null;}
+$('filmX').onclick=closeFilm;$('filmV').addEventListener('ended',closeFilm);$('dFilm').onclick=playFilm;
+$('startFilm').onclick=()=>{const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);Music.on=true;Music.start();Music.set(true);setVoice(true);playFilm();};
+window.__aura={goScene,SC,layers:()=>layers,Music};
+})();
+</script>
