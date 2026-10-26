@@ -301,6 +301,9 @@ table.data th{font-weight:500;color:var(--taupe);font-size:10.5px;letter-spacing
 .enter{display:inline-flex;align-items:center;gap:12px;background:var(--sand);color:var(--ink);border:0;border-radius:2px;padding:16px 24px;font-size:13px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;cursor:pointer}
 .enter:hover{background:var(--cream)}
 .enter svg{width:18px;height:18px}
+.btn#gPlay.cta{background:var(--sand);color:var(--ink);border-color:var(--sand);font-weight:500;animation:ctaPulse 2.4s ease-in-out infinite}
+@keyframes ctaPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,205,189,.55)}50%{box-shadow:0 0 0 10px rgba(220,205,189,0)}}
+@media (prefers-reduced-motion:reduce){.btn#gPlay.cta{animation:none}}
 .startrow{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .enter.alt{background:transparent;color:var(--cream);border:1px solid var(--sand)}
 .enter svg{width:16px;height:16px;flex:none}
@@ -772,7 +775,10 @@ async function goScene(id,{push=true,from=null,lift=null}={}){
   cur=id;setupFX(sc);$('place').textContent=sc.t;$('placesub').textContent=sc.sub;rebuildPins();
   if(useLift){await wait(200);await liftOpen();}
   (sc.hot||[]).forEach(h=>{if(h.go&&SC[h.go].img)getTex(SC[h.go].img).catch(()=>{});});
-  busy=false;}
+  busy=false;narrate(id);}
+function canNarrate(){return !tour.on&&Voice.on&&$('intro').hidden&&!document.getElementById('gate')&&!$('film').classList.contains('on')&&!$('story').classList.contains('on');}
+function narrate(id){if(tour.on||!$('intro').hidden)return;const st=TOUR.find(s=>s.sc===id);const sc=SC[id];const tx=st?st.x:(sc.t+'. '+sc.sub+'.');hideChapter();$('gStep').textContent='Explorando por su cuenta';$('gTitle').textContent=sc.t;$('gText').textContent=tx;if(canNarrate())Voice.say(tx);}
+const SHEET_SAY={menu:'Este es el menú del restaurante y bar de Aura Bay. Deslice para ver los platos y la coctelería.',servicios:'Estos son los servicios y experiencias que Aura Bay ofrece a sus residentes.',lobbydesign:'El diseño del lobby se inspira en las formas de la naturaleza: travertino, luz indirecta y madera.',conjunto:'Este es el plano del conjunto de Aura Bay, en un terreno de cinco mil doscientos treinta y tres metros cuadrados frente al mar.',data:'Estos son los datos principales del proyecto Aura Bay.',plans:'Elija su residencia, de uno a cuatro dormitorios, y conozca su plano.'};
 function lookAt(L,u,v){const tanVi=L.tanH*L.ih/L.iw;const x=(u-.5)*2*L.tanH,y=(.5-v)*2*tanVi;return [Math.atan2(x,1),Math.atan2(y,Math.hypot(x,1))];}
 function back(){const p=hist.pop();if(!p){toast('Está en el inicio del recorrido.');return;}goScene(p,{push:false});}
 async function liftClose(toK){const L=$('lift');const from=cur?lvIdx(SC[cur].lv):4;const to=lvIdx(toK);$('liftA').textContent=to<from?'▲':'▼';$('liftL').textContent=LEVELS[to]?LEVELS[to].name:'';L.classList.add('on');await wait(30);L.classList.add('closed');Music.chime();await wait(1250);}
@@ -918,7 +924,7 @@ function drawTower(c,curI){if(!c)return;const ctx=c.getContext('2d');const t0=pe
 
 /* ================= PANELES ================= */
 const sheet=$('sheet'),sheetB=$('sheetB');let sheetKind=null;
-function openSheetRaw(ey,t,html,kind){$('sheetEy').textContent=ey;$('sheetT').textContent=t;sheetB.innerHTML=html;sheet.hidden=false;sheetKind=kind;sheetB.scrollTop=0;
+function openSheetRaw(ey,t,html,kind){if(canNarrate()&&kind!=='rooms'&&kind!=='lift'){let say=SHEET_SAY[kind];if(!say&&kind==='info'){const pl=String(html).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();say=t+'. '+(pl.match(/[^.!?]+[.!?]/g)||[pl]).slice(0,2).join(' ');}Voice.say(say||(t+'.'));}$('sheetEy').textContent=ey;$('sheetT').textContent=t;sheetB.innerHTML=html;sheet.hidden=false;sheetKind=kind;sheetB.scrollTop=0;
   [['dRooms','rooms'],['dLift','lift'],['dPlans','plans'],['dInfo','data']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(kind===k)));}
 function closeSheet(){sheet.hidden=true;sheetKind=null;['dRooms','dLift','dPlans','dInfo'].forEach(id=>$(id).setAttribute('aria-pressed','false'));if(valetTimer){clearInterval(valetTimer);valetTimer=null;}}
 $('sheetX').onclick=closeSheet;
@@ -998,43 +1004,16 @@ function openData(){const row=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
   <div class="group"><h3>Cómo navegar</h3><p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--muted)">Arrastre para girar la mirada. Rueda del mouse o dos dedos: acercar. Toque los puntos luminosos para entrar. Flechas: mirar. Tecla N: siguiente parada.</p></div>`,'data');}
 
 /* ================= MÚSICA DE PLAYA ORIGINAL (generada en vivo) ================= */
-const Music={ctx:null,on:true,bus:null,master:null,duckG:null,timer:null,step:0,next:0,bar:0,started:false,
+const Music={ctx:null,on:true,master:null,duckG:null,src:null,buf:null,started:false,loading:null,
   init(){if(this.ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=this.ctx=new AC();
-    const comp=c.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=3;comp.connect(c.destination);
-    this.master=c.createGain();this.master.gain.value=0;this.master.connect(comp);
+    this.master=c.createGain();this.master.gain.value=0;this.master.connect(c.destination);
     this.duckG=c.createGain();this.duckG.gain.value=1;this.duckG.connect(this.master);
-    const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=6500;lp.connect(this.duckG);this.bus=lp;
-    const conv=c.createConvolver();const len=c.sampleRate*2.8,ir=c.createBuffer(2,len,c.sampleRate);for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2);}conv.buffer=ir;
-    this.rev=c.createGain();this.rev.gain.value=.32;this.rev.connect(conv);conv.connect(this.duckG);
-    this.dly=c.createDelay(1);this.dly.delayTime.value=60/96*0.75;const fb=c.createGain();fb.gain.value=.22;const dlp=c.createBiquadFilter();dlp.type='lowpass';dlp.frequency.value=2600;this.dly.connect(dlp);dlp.connect(fb);fb.connect(this.dly);dlp.connect(this.bus);
-    const nlen=c.sampleRate*2,nb=c.createBuffer(1,nlen,c.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nlen;i++)nd[i]=Math.random()*2-1;this.noise=nb;
-    // olas
-    const blen=c.sampleRate*8,bb=c.createBuffer(1,blen,c.sampleRate),bd=bb.getChannelData(0);let last=0;for(let i=0;i<blen;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;bd[i]=last*3.2;}
-    const src=c.createBufferSource();src.buffer=bb;src.loop=true;const wl=c.createBiquadFilter();wl.type='lowpass';wl.frequency.value=700;const wg=c.createGain();wg.gain.value=.12;const lfo=c.createOscillator();lfo.frequency.value=.085;const lg=c.createGain();lg.gain.value=.09;lfo.connect(lg);lg.connect(wg.gain);src.connect(wl);wl.connect(wg);wg.connect(this.master);src.start();lfo.start();},
-  start(){this.init();if(!this.ctx)return;this.ctx.resume();if(this.started)return;this.started=true;this.next=this.ctx.currentTime+.15;this.step=0;this.bar=0;
-    this.timer=setInterval(()=>this.sched(),30);this.set(this.on);},
-  set(on){this.on=on;document.body.classList.toggle('music',on);if(!this.ctx)return;const g=this.master.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(on?.7:0,t+(on?2.5:.6));},
-  duck(d){if(!this.ctx)return;const g=this.duckG.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(d?.38:1,t+.6);},
-  mf(m){return 440*Math.pow(2,(m-69)/12);},
-  CH:[{b:41,n:[53,57,60,64]},{b:40,n:[52,55,59,62]},{b:38,n:[50,53,57,60]},{b:36,n:[48,52,55,59]},{b:41,n:[53,57,60,64]},{b:43,n:[55,59,62,65]},{b:45,n:[57,60,64,67]},{b:43,n:[55,57,62,65]}],
-  sched(){const c=this.ctx;const spb=60/96,s16=spb/4;while(this.next<c.currentTime+.15){const st=this.step%16;const swing=(st%2)?s16*.16:0;const t=this.next+swing;const ch=this.CH[this.bar%8];this.play(st,t,ch,s16);this.next+=s16;this.step++;if(this.step%16===0)this.bar++;}},
-  play(st,t,ch,s16){const bar=this.bar;
-    if(st===0||st===8)this.kick(t,st===0?.32:.22);
-    if(st===0)this.bass(t,ch.b,s16*5);if(st===6)this.bass(t,ch.b+7,s16*3);if(st===10)this.bass(t,ch.b+12,s16*3);if(st===14&&bar%2)this.bass(t,ch.b+10,s16*2);
-    if(st===0||st===6||st===10)ch.n.forEach((m,i)=>this.ep(t+i*.008,this.mf(m),st===0?s16*5:s16*3,st===0?.07:.05));
-    const ar=[2,5,7,11,13,15];if(bar>=2&&ar.includes(st)&&Math.random()<.35){const m=ch.n[(Math.random()*4)|0]+12+(Math.random()<.25?12:0);this.marimba(t,this.mf(m),.06);}
-    if(st===0&&bar%4===0)this.pad(t,ch,s16*64);},
-  out(node,rev=.3,dl=0){node.connect(this.bus);if(rev){const g=this.ctx.createGain();g.gain.value=rev;node.connect(g);g.connect(this.rev);}if(dl){const g=this.ctx.createGain();g.gain.value=dl;node.connect(g);g.connect(this.dly);}},
-  env(g,t,a,peak,dec){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+dec);},
-  kick(t,v){const c=this.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(115,t);o.frequency.exponentialRampToValueAtTime(42,t+.14);this.env(g,t,.003,v,.32);o.connect(g);this.out(g,0);o.start(t);o.stop(t+.4);},
-  clap(t){const c=this.ctx;for(let i=0;i<3;i++){const s=c.createBufferSource();s.buffer=this.noise;const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=1600;f.Q.value=.8;const g=c.createGain();this.env(g,t+i*.011,.001,.07,.09);s.connect(f);f.connect(g);this.out(g,.4);s.start(t+i*.011,Math.random());s.stop(t+.2);}},
-  shaker(t,v){const c=this.ctx,s=c.createBufferSource();s.buffer=this.noise;const f=c.createBiquadFilter();f.type='highpass';f.frequency.value=7000;const g=c.createGain();this.env(g,t,.004,v,.05);s.connect(f);f.connect(g);this.out(g,.15);s.start(t,Math.random());s.stop(t+.08);},
-  bass(t,m,d){const c=this.ctx,o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();o.type='triangle';o.frequency.value=this.mf(m);f.type='lowpass';f.frequency.value=420;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.32,t+.01);g.gain.setTargetAtTime(0,t+d*.8,.06);o.connect(f);f.connect(g);this.out(g,0);o.start(t);o.stop(t+d+.4);},
-  ep(t,f,d,v){const c=this.ctx,car=c.createOscillator(),mod=c.createOscillator(),mg=c.createGain(),g=c.createGain();car.frequency.value=f;mod.frequency.value=f;mg.gain.setValueAtTime(f*.7,t);mg.gain.exponentialRampToValueAtTime(f*.05,t+.6);mod.connect(mg);mg.connect(car.frequency);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.006);g.gain.exponentialRampToValueAtTime(v*.3,t+.4);g.gain.setTargetAtTime(0,t+d,.12);car.connect(g);this.out(g,.35,.08);car.start(t);mod.start(t);car.stop(t+d+.8);mod.stop(t+d+.8);},
-  marimba(t,f,v){const c=this.ctx,o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain(),g2=c.createGain();o.frequency.value=f;o2.frequency.value=f*4;this.env(g,t,.003,v,.55);this.env(g2,t,.002,v*.25,.12);o.connect(g);o2.connect(g2);g2.connect(g);this.out(g,.45,.35);o.start(t);o2.start(t);o.stop(t+.8);o2.stop(t+.3);},
-  pad(t,ch,d){const c=this.ctx;ch.n.forEach(m=>{const o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();o.type='triangle';o.frequency.value=this.mf(m);o.detune.value=(Math.random()-.5)*8;f.type='lowpass';f.frequency.value=1200;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.02,t+2.5);g.gain.linearRampToValueAtTime(0,t+d);o.connect(f);f.connect(g);this.out(g,.6);o.start(t);o.stop(t+d+.1);});},
-  chime(){if(!this.ctx||!this.on)return;const t=this.ctx.currentTime;[76,81].forEach((m,i)=>this.marimba(t+i*.18,this.mf(m),.09));}
+    this.loading=fetch('img/aura-music.m4a').then(r=>r.arrayBuffer()).then(ab=>new Promise((ok,ko)=>c.decodeAudioData(ab,ok,ko))).then(buf=>{this.buf=buf;this.play();}).catch(()=>{});},
+  play(){if(!this.buf||this.src||!this.ctx)return;const s=this.ctx.createBufferSource();s.buffer=this.buf;s.loop=true;s.loopStart=.5;s.loopEnd=Math.min(60.5,this.buf.duration);s.connect(this.duckG);s.start(0,.5);this.src=s;},
+  start(){this.init();if(!this.ctx)return;try{this.ctx.resume();}catch(e){}if(this.started)return;this.started=true;this.play();this.set(this.on);},
+  set(on){this.on=on;document.body.classList.toggle('music',on);if(!this.ctx)return;const g=this.master.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(on?.55:0,t+(on?2.5:.6));},
+  duck(d){if(!this.ctx)return;const g=this.duckG.gain,t=this.ctx.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(d?.3:1,t+.6);},
+  chime(){if(!this.ctx||!this.on)return;const c=this.ctx,t=c.currentTime;[659.25,880].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.18);g.gain.linearRampToValueAtTime(.05,t+i*.18+.01);g.gain.exponentialRampToValueAtTime(.0001,t+i*.18+.8);o.connect(g);g.connect(this.master);o.start(t+i*.18);o.stop(t+i*.18+.9);});}
 };
 $('dMusic').onclick=()=>{if(!Music.started)Music.start();Music.set(!Music.on);$('dMusic').setAttribute('aria-pressed',String(Music.on));$('dMusic').classList.toggle('off',!Music.on);$('dMusic').querySelector('span').textContent=Music.on?'Música':'Sin música';};
 
@@ -1087,7 +1066,7 @@ const TOUR=[
 const tour={on:false,i:-1,timer:null,need:0};
 function setGuide(i){if(i<0){$('gStep').textContent='Su anfitriona en Aura Bay';$('gTitle').textContent='Bienvenido';$('gText').textContent='Arrastre para mirar a su alrededor. Toque los puntos luminosos para entrar a cada espacio.';$('gProg').style.width='0%';return;}
   const s=TOUR[i];$('gStep').textContent=`Parada ${i+1} de ${TOUR.length}`;$('gTitle').textContent=s.t;$('gText').textContent=s.x;$('gProg').style.width=((i+1)/TOUR.length*100)+'%';}
-function playBtn(){$('gPlay').innerHTML=tour.on?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg><span>Pausar</span>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>'+(tour.i>=0?'Continuar':'Recorrido guiado')+'</span>';document.body.classList.toggle('cine',tour.on);}
+function playBtn(){$('gPlay').innerHTML=tour.on?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg><span>Pausar</span>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>'+(tour.i>=0?'Continuar recorrido':'Recorrido guiado')+'</span>';document.body.classList.toggle('cine',tour.on);$('gPlay').classList.toggle('cta',!tour.on);}
 async function runStep(i){clearTimeout(tour.timer);if(i<0||i>=TOUR.length){stopTour();if(i>=TOUR.length)showFinale();return;}tour.i=i;const s=TOUR[i];setGuide(i);closeSheet();closeReel();
   if(cur!==s.sc){while(busy)await wait(100);await goScene(s.sc);}
   if(tour.i!==i)return;showChapter(s.ce,s.ct,s.cs);
@@ -1131,7 +1110,6 @@ function telOK(t){const d=t.replace(/[\s\-()]/g,'');return /^09\d{8}$/.test(d)||
 
 /* ================= INICIO ================= */
 resize();playBtn();requestAnimationFrame(frame);
-if(matchMedia('(max-width:720px)').matches){$('guide').classList.add('min');$('gMin').style.transform='rotate(180deg)';}
 ['torre','playa','beachclub','piscina','lobby'].forEach(n=>getTex(n).catch(()=>{}));
 goScene('fachada',{push:false});
 function begin(sound){const it=$('intro');it.style.transition='opacity .9s';it.style.opacity='0';setTimeout(()=>{it.hidden=true;const v=it.querySelector('video');if(v)v.pause();},920);
