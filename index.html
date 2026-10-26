@@ -1101,7 +1101,7 @@ function telOK(t){const d=t.replace(/[\s\-()]/g,'');return /^09\d{8}$/.test(d)||
   $('gForm').addEventListener('submit',e=>{e.preventDefault();let ok=true;
     const name=$('gName').value.trim().replace(/\s+/g,' '),id=$('gId').value.trim(),tel=$('gTel').value.trim();
     $('eName').textContent=name.split(' ').length>=2&&name.length>=5?'':(ok=false,'Escriba sus nombres y apellidos.');
-    $('eId').textContent=docType==='cedula'?(cedulaOK(id)?'':(ok=false,'La cédula no es válida. Revise los 10 dígitos.')):(/^[A-Za-z0-9]{5,20}$/.test(id)?'':(ok=false,'Revise el número de pasaporte.'));
+    $('eId').textContent=docType==='cedula'?(/^\d{10}$/.test(id)?'':(ok=false,'La cédula debe tener 10 números.')):(/^[A-Za-z0-9]{5,20}$/.test(id)?'':(ok=false,'Revise el número de pasaporte.'));
     $('eTel').textContent=telOK(tel)?'':(ok=false,'Escriba un celular válido, por ejemplo 0991234567.');
     $('eOk').textContent=$('gOk').checked?'':(ok=false,'Para continuar, acepte el tratamiento de datos.');
     if(!ok)return;
